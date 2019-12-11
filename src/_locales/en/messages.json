@@ -1,0 +1,260 @@
+{
+  "address": {
+    "message": "Address"
+  },
+  "appName": {
+    "message": "Speckle"
+  },
+  "appShortName": {
+    "message": "Speckle"
+  },
+  "appDescription": {
+    "message": "Universal browser extension for Web 3 and the Polkadot ecosystem"
+  },
+  "browserActionTitle": {
+    "message": "Speckle"
+  },
+  "welcome": {
+    "message": "Welcome to Speckle"
+  },
+  "continue": {
+    "message": "Continue"
+  },
+  "pickColorTitle": {
+    "message": "Pick your favorite color"
+  },
+  "pickColorDescription": {
+    "message": "This can be changed in the settings"
+  },
+  "speckleIntroduction": {
+    "message": "Speckle is a Web 3 wallet and browser built for Polkadot. You can interact with multiple chains and manage their accounts."
+  },
+  "termTitle": {
+    "message": "Confirm terms of service"
+  },
+  "termDescription": {
+    "message": "Information Automatically Collected. We may automatically record certain information about how you use our Site (we refer to this information as “Log Data“). Log Data may include information such as a user’s Internet Protocol (IP) address, device and browser type, operating system, the pages or features of our Site to which a user browsed and the time spent on those pages or features, the frequency with which the Site is used by a user, search terms, the links on our Site that a user clicked on or used, and other statistics. We use this information to administer the Service and we analyze (and may engage third parties to analyze) this information to improve and enhance the Service by expanding its features and functionality and tailoring it to our users’ needs and preferences. We may use cookies or similar technologies to analyze trends, administer the website, track users’ movements around the website, and to gather demographic information about our user base as a whole. Users can control the use of cookies at the individual browser level. For more information, please see the section entitled “Cookies Policy” below."
+  },
+  "termAcceptButton": {
+    "message": "I Accept Terms Of Service"
+  },
+  "passwordDescription": {
+    "message": "Enter a password with a minimum of 8 characters, which will be used to sign into your account"
+  },
+  "mnemonic": {
+    "message": "Mnemonic"
+  },
+  "importedAccount": {
+    "message": "Imported Account"
+  },
+  "accountName": {
+    "message": "Account Name (max 32 chars including space)"
+  },
+  "password": {
+    "message": "Password"
+  },
+  "fileUpload": {
+    "message": "Drag n' drop the keystore file and click here to choose one"
+  },
+  "phraseDescription": {
+    "message": "Store your secret phrase in a safe location. It is required to restore you account."
+  },
+  "phraseTitle": {
+    "message": "Secret Backup Phrase"
+  },
+  "qrDesc": {
+    "message": "Use your QR scanner or camera to access this public key."
+  },
+  "accountNameTitle": {
+    "message": "Enter Account Name"
+  },
+  "copyText": {
+    "message": "Copy Text"
+  },
+  "copyToClipboard": {
+    "message": "Copy to clipboard"
+  },
+  "copiedExclam": {
+    "message": "Copied!"
+  },
+  "copyTextMessage": {
+    "message": "Phrase copied to clipboard. Make sure to paste and save it to a secure place."
+  },
+  "copyAddressMessage": {
+    "message": "Account address is copied to clipboard."
+  },
+  "downloadFile": {
+    "message": "Download"
+  },
+  "createAccount": {
+    "message": "Create Account"
+  },
+  "phraseConfirmTitle": {
+    "message": "Enter your backup phrase"
+  },
+  "phraseMismatch": {
+    "message": "Click the words above in the correct order to confirm your seed phrase."
+  },
+  "confirmPhraseButton": {
+    "message": "Confirm Backup Phrase"
+  },
+  "selectNetwork": {
+    "message": "Select And Start"
+  },
+  "popular": {
+    "message": "Popular"
+  },
+  "recommended": {
+    "message": "Recommended"
+  },
+  "games": {
+    "message": "Games"
+  },
+  "trade": {
+    "message": "Trade"
+  },
+  "backupKeypairMessage": {
+    "message": "Great! Your first account has been created. Before you proceed, it is strongly recommended that you download the password protected key pair file and backup to a secure place."
+  },
+  "downloadKeyPairButton": {
+    "message": "Download Key Pair File"
+  },
+  "proceedButton": {
+    "message": "Proceed"
+  },
+  "passwordError": {
+    "message": "Empty or wrong password"
+  },
+  "walletLocked": {
+    "message": "Wallet is locked"
+  },
+  "accountNotFound": {
+    "message": "Account not found"
+  },
+  "mnemonicUnmatched": {
+    "message": "Mnemonic not matched with the generated one"
+  },
+  "mnemonicInvalid": {
+    "message": "Mnemonic is invalid"
+  },
+  "keystoreInvalid": {
+    "message": "Keystore file is invalid"
+  },
+  "loginHere": {
+    "message": "Login here"
+  },
+  "login": {
+    "message": "Login"
+  },
+  "logout": {
+    "message": "Logout"
+  },
+  "help": {
+    "message": "Get help"
+  },
+  "rpcError": {
+    "message": "RPC service error"
+  },
+  "getBalance": {
+    "message": "getting balance..."
+  },
+  "balanceNA": {
+    "message": "balance N/A"
+  },
+  "apiError": {
+    "message": "API not found"
+  },
+  "myAccountDropdownTitle": {
+    "message": "My Polkadot Wallet"
+  },
+  "createNewAccount": {
+    "message": "Create New Account"
+  },
+  "importExistingAccount": {
+    "message": "Import Existing Account"
+  },
+  "menuHome": {
+    "message": "Home"
+  },
+  "menuStake": {
+    "message": "Stake"
+  },
+  "menuDemocracy": {
+    "message": "Democracy"
+  },
+  "menuSend": {
+    "message": "Send"
+  },
+  "keyringNotInit": {
+    "message": "Keyring is not initialised yet"
+  },
+  "howToImport": {
+    "message": "How would you like to import?"
+  },
+  "phraseOption": {
+    "message": "12 word seed phrase"
+  },
+  "phraseOptionDesc": {
+    "message": "Restore an existing account by entering your 12 word seed phrase"
+  },
+  "keystoreOption": {
+    "message": "Keystore file"
+  },
+  "keystoreOptionDesc": {
+    "message": "Restore an existing account by uploading your encrypted keystore file"
+  },
+  "importAccount": {
+    "message": "Import Existing Account"
+  },
+  "keystoreOptionGuide": {
+    "message": "Upload keystore file and enter the password required to decrypt it"
+  },
+  "importKeystoreError": {
+    "message": "Cannot import the keystore file with the password supplied"
+  },
+  "errorMissingPage": {
+    "message": "It appears the page is missing at the moment. It may be still under development."
+  },
+  "goBack": {
+    "message": "Go Back"
+  },
+  "tabAll": {
+    "message": "All"
+  },
+  "tabSent": {
+    "message": "Sent"
+  },
+  "tabStaked": {
+    "message": "Staked"
+  },
+  "amount": {
+    "message": "Amount"
+  },
+  "toAddress": {
+    "message": "Send to"
+  },
+  "transferFee": {
+    "message": "Transfer Fee:"
+  },
+  "authorization": {
+    "message": "Authorization Request"
+  },
+  "signing": {
+    "message": "Your signature is requested!"
+  },
+  "signedBy": {
+    "message": "Signed By"
+  },
+  "signingMessageIcon": {
+    "message": "Message"
+  },
+  "signingContent": {
+    "message": "Sign this message to prove ownership of your account!"
+  },
+  "invalidAddress": {
+    "message": "Invalid address"
+  },
+  "clickToQRCode": {
+    "message": "Click to show in QR Code"
+  }
+}
