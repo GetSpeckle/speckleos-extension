@@ -16,12 +16,11 @@ import 'react-tippy/dist/tippy.css'
 import t from '../../services/i18n'
 import formatBalance from '@polkadot/util/format/formatBalance'
 import Balance from '../account/Balance'
-import { AccountSection } from '../dashboard/Dashboard'
 import { Dimmer, Form, Loader } from 'semantic-ui-react'
 import Amount from './Amount'
 import ToAddress from './ToAddress'
-import { ExtrinsicPayloadValue, IExtrinsic } from '@polkadot/types/types'
-import { SignerOptions } from '@polkadot/api/types'
+import { ExtrinsicPayloadValue, IExtrinsic, SignerPayloadJSON } from '@polkadot/types/types'
+import { DeriveBalancesAll } from '@polkadot/api-derive/types'
 import Fee from './Fee'
 import Confirm from './Confirm'
 import AccountDropdown from '../account/AccountDropdown'
@@ -33,30 +32,36 @@ import {
 import { SubmittableResult } from '@polkadot/api'
 import { SubmittableExtrinsic } from '@polkadot/api/promise/types'
 import { HOME_ROUTE, QR_ROUTE } from '../../constants/routes'
-import { EventRecord, Index, Balance as BalanceType } from '@polkadot/types/interfaces'
-import { decodeAddress } from '@polkadot/util-crypto'
+import { Index } from '@polkadot/types/interfaces'
+import { SiDef } from '@polkadot/util/types'
+import styled from 'styled-components'
+import { isAddressValid } from '../../services/address-transformer'
+import { defaultExtensions } from '@polkadot/types/extrinsic/signedExtensions'
 
 interface ISendProps extends StateProps, RouteComponentProps, DispatchProps {}
 
 interface ISendState {
   amount: string
+  amountSi: SiDef
+  amountUnit: string
+  tip: string
+  tipSi: SiDef
+  tipUnit: string
+  nonce: Index | null
   toAddress: string
   hasAvailable: boolean
-  isSi: boolean
   isLoading: boolean
-  siUnit: string
   fee: BN
   extrinsic?: IExtrinsic | null
-  creationFee: BN
-  existentialDeposit: BN
-  recipientAvailable: BN
-  modalOpen: boolean,
-  isTimeout: boolean
+  senderAvailable: BN
+  modalOpen: boolean
 }
 
 const TEN = new BN(10)
 
-const si = formatBalance.findSi('-')
+const amountSi: SiDef = formatBalance.findSi('-')
+
+const tipSi: SiDef = formatBalance.findSi('-')
 
 class Send extends React.Component<ISendProps, ISendState> {
   get api (): ApiPromise {
@@ -70,18 +75,19 @@ class Send extends React.Component<ISendProps, ISendState> {
 
     this.state = {
       amount: '',
+      amountSi,
+      amountUnit: amountSi.value,
+      tip: '',
+      tipSi,
+      tipUnit: tipSi.value,
+      nonce: null,
       toAddress: '',
       hasAvailable: true,
-      isSi: true,
       isLoading: false,
-      siUnit: si.value,
       fee: new BN(0),
       extrinsic: undefined,
-      creationFee: new BN(0),
-      existentialDeposit: new BN(0),
-      recipientAvailable: new BN(0),
-      modalOpen: false,
-      isTimeout: false
+      senderAvailable: new BN(0),
+      modalOpen: false
     }
   }
 
@@ -89,33 +95,16 @@ class Send extends React.Component<ISendProps, ISendState> {
     this.props.setError(null)
   }
 
-  getSiPowers = (siUnit = this.state.siUnit): [BN, number, number] => {
-    const { isSi } = this.state
-
-    const basePower = isSi ? formatBalance.getDefaults().decimals : 0
-    const siUnitPower = isSi ? formatBalance.findSi(siUnit).power : 0
-
-    return [new BN(basePower + siUnitPower), basePower, siUnitPower]
-  }
-
-  inputValueToBn = (value: string, siUnit?: string): BN => {
-    const [siPower, basePower, siUnitPower] = this.getSiPowers(siUnit)
-
-    const isDecimalValue = value.match(/^(\d+)\.(\d+)$/)
-
-    if (isDecimalValue) {
-      if (siUnitPower - isDecimalValue[2].length < -basePower) {
-        return new BN(-1)
-      }
-
-      const div = new BN(value.replace(/\.\d*$/, ''))
-      const mod = new BN(value.replace(/^\d+\./, ''))
-
-      // tslint:disable-next-line:max-line-length
-      return div.mul(TEN.pow(siPower)).add(mod.mul(TEN.pow(new BN(basePower + siUnitPower - mod.toString().length))))
-    } else {
-      return new BN(value.replace(/[^\d]/g, '')).mul(TEN.pow(siPower))
+  inputValueToBn = (value: string, selectedSi: SiDef): BN => {
+    const parts: string[] = value.split('.')
+    const decimals = formatBalance.getDefaults().decimals
+    const bigPart = new BN(parts[0]).mul(TEN.pow(new BN(decimals + selectedSi.power)))
+    if (parts.length === 1) {
+      return bigPart
     }
+    const bn = new BN(decimals + selectedSi.power - parts[1].length)
+    const smallPart = new BN(parts[1]).mul(TEN.pow(bn))
+    return bigPart.add(smallPart)
   }
 
   changeAddress = event => {
@@ -126,54 +115,83 @@ class Send extends React.Component<ISendProps, ISendState> {
     this.setState({ amount: event.target.value })
   }
 
-  changeFee = (fee, creationFee, existentialDeposit, recipientAvailable) => {
-    this.setState({
-      fee: fee,
-      creationFee: creationFee,
-      existentialDeposit: existentialDeposit,
-      recipientAvailable: recipientAvailable
-    })
+  changeTip = event => {
+    this.setState({ tip: event.target.value })
   }
 
-  changeSiUnit = (_event, data) => {
-    const val = formatBalance.findSi(data.value).value
-    this.setState({ siUnit: val })
+  changeFee = (fee) => {
+    this.setState({ fee: fee })
+  }
+
+  changeAmountSi = (_event, data) => {
+    const siDef = formatBalance.findSi(data.value)
+    this.setState({ amountSi: siDef, amountUnit: siDef.value })
+  }
+
+  changeTipSi = (_event, data) => {
+    const siDef = formatBalance.findSi(data.value)
+    this.setState({ tipSi: siDef, tipUnit: siDef.value })
   }
 
   changeModal = (open) => {
     this.setState({ modalOpen: open })
   }
 
+  getTotal = () => {
+    const amountBn = this.inputValueToBn(this.state.amount, this.state.amountSi)
+    const tipBn = this.inputValueToBn(this.state.tip, this.state.tipSi)
+    return amountBn.add(tipBn).add(this.state.fee)
+  }
+
   saveExtrinsic = async () => {
-    if (!this.props.settings.selectedAccount) {
+    if (!this.props.account) {
       return
     }
 
-    const BnAmount = this.inputValueToBn(this.state.amount, this.state.siUnit)
-    const currentAddress = this.props.settings.selectedAccount.address
+    const amountBn = this.inputValueToBn(this.state.amount, this.state.amountSi)
+    const tipBn = this.inputValueToBn(this.state.tip, this.state.tipSi)
+    const total = amountBn.add(tipBn).add(this.state.fee)
+    const currentAddress = this.props.account.address
+    const balancesAll = await this.api.derive.balances.all(currentAddress) as DeriveBalancesAll
+    const available = balancesAll.availableBalance
+    if (available.lt(total)) {
+      this.props.setError(t('notEnoughBalance'))
+      return
+    }
+    const extrinsic = this.api.tx.balances.transfer(this.state.toAddress, amountBn)
+    const currentBlockNumber = await this.api.query.system.number()
+    const currentBlockHash = await this.api.rpc.chain.getBlockHash(currentBlockNumber)
 
-    const extrinsic: IExtrinsic = await this.api.tx.balances
-      .transfer(this.state.toAddress, BnAmount)
-
-    const signOptions: SignerOptions = {
-      blockNumber: await this.api.query.system.number() as unknown as BN,
-      blockHash: this.api.genesisHash,
-      genesisHash: this.api.genesisHash,
-      nonce: await this.api.query.system.accountNonce(currentAddress) as Index,
-      runtimeVersion: this.api.runtimeVersion
+    this.setState({ senderAvailable: balancesAll.availableBalance })
+    const currentNonce = balancesAll.accountNonce
+    this.setState({ nonce: currentNonce })
+    let signerPayload: SignerPayloadJSON = {
+      address: currentAddress,
+      blockHash: currentBlockHash.toHex(),
+      blockNumber: currentBlockNumber.toString(),
+      era: extrinsic.era.toHex(),
+      genesisHash: this.api.genesisHash.toHex(),
+      method: extrinsic.method.toHex(),
+      nonce: (this.state.nonce! as Index).toHex(),
+      specVersion: this.api.runtimeVersion.specVersion.toHex(),
+      transactionVersion: this.api.runtimeVersion.transactionVersion.toHex(),
+      tip: tipBn.toString(),
+      version: extrinsic.version,
+      signedExtensions: defaultExtensions
     }
     const payloadValue: ExtrinsicPayloadValue = {
       era: extrinsic.era,
-      method: extrinsic.method.toHex(),
-      blockHash: signOptions.blockHash,
-      genesisHash: signOptions.genesisHash,
-      nonce: signOptions.nonce,
-      tip: 0,
-      specVersion: this.api.runtimeVersion.specVersion.toNumber()
+      method: extrinsic.method,
+      blockHash: currentBlockHash,
+      genesisHash: this.api.genesisHash,
+      nonce: this.state.nonce!.toNumber(),
+      tip: tipBn.toNumber(),
+      specVersion: this.api.runtimeVersion.specVersion.toNumber(),
+      transactionVersion: this.api.runtimeVersion.transactionVersion.toNumber()
     }
-    signExtrinsic(extrinsic, currentAddress, signOptions).then(signature => {
+    signExtrinsic(signerPayload).then(signature => {
       const signedExtrinsic = extrinsic.addSignature(
-        currentAddress as any,
+        currentAddress,
         signature,
         payloadValue
       )
@@ -181,19 +199,19 @@ class Send extends React.Component<ISendProps, ISendState> {
     })
   }
 
-  confirm = async (done) => {
+  confirm = async () => {
 
     if (!this.state.extrinsic || !this.props.settings.selectedAccount) {
-      this.props.setError('Error occurred when processing your transaction.')
+      this.props.setError(t('transactionError'))
       return
     }
 
-    const address = this.props.settings.selectedAccount.address
+    const { address } = this.props.settings.selectedAccount
 
-    const available = await this.api.query.balances.freeBalance(address) as BalanceType
-
-    if (available.isZero()) {
-      this.props.setError('You account has 0 balance.')
+    const balancesAll = await this.api.derive.balances.all(address) as DeriveBalancesAll
+    const available = balancesAll.availableBalance
+    if (available.lt(this.getTotal())) {
+      this.props.setError(t('notEnoughBalance'))
       return
     }
 
@@ -204,91 +222,79 @@ class Send extends React.Component<ISendProps, ISendState> {
       from: address,
       to: this.state.toAddress,
       amount: this.state.amount,
-      unit: this.state.siUnit === '-' ? '' : this.state.siUnit,
+      unit: this.state.amountUnit === '-' ? '' : this.state.amountUnit,
       type: 'Sent',
       createTime: new Date().getTime(),
       status: 'Pending',
       fee: formatBalance(this.state.fee)
     }
 
-    this.props.upsertTransaction(
-      address,
-      txItem,
-      this.props.transactions
-    )
+    this.updateList(address, this.props.settings.network, txItem)
 
     const submittable = this.state.extrinsic as SubmittableExtrinsic
-    const sendTimer = this.startSendTimer()
-    submittable.send(({ events, status }: SubmittableResult) => {
-      const { history } = this.props
-      console.log('Transaction status:', status.type)
-      if (status.isFinalized) {
+    submittable.send((result: SubmittableResult) => {
+      if (result.isInBlock) {
+        console.log(`Transaction in block at blockHash ${result.status.asInBlock}`)
         this.setState({ isLoading: false })
+        this.props.history.push(HOME_ROUTE)
+      } else if (result.isFinalized) {
+        console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`)
         txItem.updateTime = new Date().getTime()
-        console.log('Completed at block hash', status.value.toHex())
-        console.log('Events:')
-        events.forEach(({ phase, event: { data, method, section } }: EventRecord) => {
-          console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString())
-          // TODO: const the value
-          if (method === 'ExtrinsicSuccess') {
-            txItem.status = 'Success'
-            this.props.upsertTransaction(address, txItem, this.props.transactions)
-          } else if (method === 'ExtrinsicFailed') {
-            txItem.status = 'Failure'
-            this.props.upsertTransaction(address, txItem, this.props.transactions)
-          }
-        })
-        done && done()
-        if (!this.state.isTimeout) {
-          clearTimeout(sendTimer)
-          history.push(HOME_ROUTE)
-        }
-      } else if (status.isInvalid || status.isDropped || status.isUsurped) {
-        this.setState({ isLoading: false })
+        txItem.status = 'Success'
+        this.updateList(address, this.props.settings.network, txItem)
+      } else if (result.isError) {
+        txItem.updateTime = new Date().getTime()
         txItem.status = 'Failure'
-        txItem.updateTime = new Date().getTime()
-        this.props.upsertTransaction(address, txItem, this.props.transactions)
-        this.props.setError('Failed to send the transaction')
-        if (!this.state.isTimeout) {
-          clearTimeout(sendTimer)
-        }
+        this.updateList(address, this.props.settings.network, txItem)
+        this.props.setError(t('transactionError'))
+        this.setState({ isLoading: false })
+      } else if (result.isWarning) {
+        console.warn(result.status)
       }
     }).catch((err) => {
       console.log('Error', err)
-      txItem.status = 'Failure'
-      this.setState({ isLoading: false })
       txItem.updateTime = new Date().getTime()
-      this.props.upsertTransaction(address, txItem, this.props.transactions)
-      this.props.setError('Failed to send the transaction')
-      if (!this.state.isTimeout) {
-        clearTimeout(sendTimer)
-      }
+      txItem.status = 'Failure'
+      this.updateList(address, this.props.settings.network, txItem)
+      this.props.setError(t('transactionError'))
+      this.setState({ isLoading: false })
     })
   }
 
-  startSendTimer = () => {
-    const { history } = this.props
-    const timer = setTimeout(() => {
-      this.setState({ isLoading: false, isTimeout: true })
-      history.push(HOME_ROUTE)
-    }, 6000)
-    return timer
+  updateList = (address, network, txItem) => {
+    this.props.getTransactions(address, network).then((getTxs) => {
+      const txs = getTxs.value
+      this.props.upsertTransaction(address, network,
+        txItem, txs)
+    })
   }
 
   readyToSubmit = (): boolean => {
-    return this.isToAddressValid() && !!this.state.amount && this.state.hasAvailable
+    return isAddressValid(this.state.toAddress)
+      && !!this.state.amount
+      && this.state.hasAvailable
+      && this.isAmountValid()
+      && this.isTipValid()
   }
 
-  isToAddressValid = (): boolean => {
-    try {
-      return decodeAddress(this.state.toAddress).length === 32
-    } catch (e) {
-      return false
+  isAmountValid = (): boolean => {
+    const n = Number(this.state.amount)
+    return !isNaN(n) && n > 0
+  }
+
+  isTipValid = (): boolean => {
+    if (this.state.tip) {
+      const n = Number(this.state.tip)
+      return !isNaN(n) && n >= 0
     }
+    return true
   }
 
   render () {
-    if (!this.props.settings.selectedAccount) {
+    if (!this.props.account) {
+      return null
+    }
+    if (!this.props.account.address) {
       return null
     }
 
@@ -305,45 +311,53 @@ class Send extends React.Component<ISendProps, ISendState> {
     return (
       <ContentContainer>
         <Dimmer active={this.state.isLoading}>
-          <Loader indeterminate={true}> Processing transaction, please wait ...</Loader>
+          <Loader indeterminate={true}>{t('processingTx')}</Loader>
         </Dimmer>
         <AccountDropdown qrDestination={QR_ROUTE} />
-        <AccountSection>
-          <Balance address={this.props.settings.selectedAccount.address} />
-        </AccountSection>
+        <DividerSection>
+          <Balance address={this.props.account.address} />
+        </DividerSection>
         <div style={{ height: 27 }} />
-        <AccountSection />
+        <DividerSection />
         <Form>
-          <Amount handleAmountChange={this.changeAmount} handleDigitChange={this.changeSiUnit}/>
-          <div style={{ height: 27 }} />
-          <ToAddress handleAddressChange={this.changeAddress}/>
-          {this.isToAddressValid() || <ErrorMessage>{t('invalidAddress')}</ErrorMessage>}
-          <div style={{ height: 27 }} />
-          <AccountSection>
-            <Fee
-              address={this.props.settings.selectedAccount.address}
-              toAddress={this.state.toAddress}
-              handleFeeChange={this.changeFee}
+          <div>
+            <Amount
+              handleAmountChange={this.changeAmount}
+              handleAmountSiChange={this.changeAmountSi}
+              handleTipChange={this.changeTip}
+              handleTipSiChange={this.changeTipSi}
+              amountError={this.isAmountValid() ? '' : t('positiveNumber')}
+              tipError={this.isTipValid() ? '' : t('notNegative')}
             />
-          </AccountSection>
-          <Section>
-            <Confirm
-              network={this.props.settings.network}
-              color={this.props.settings.color}
-              extrinsic={this.state.extrinsic}
-              trigger={submitButton}
-              fromAddress={this.props.settings.selectedAccount.address}
-              amount={this.inputValueToBn(this.state.amount, this.state.siUnit)}
-              toAddress={this.state.toAddress}
-              fee={this.state.fee!}
-              creationFee={this.state.creationFee}
-              existentialDeposit={this.state.existentialDeposit}
-              recipientAvailable={this.state.recipientAvailable}
-              confirm={this.confirm}
-              open={this.state.modalOpen}
-              handleModal={this.changeModal}
-            />
-          </Section>
+            <ToAddress handleAddressChange={this.changeAddress}/>
+            {/* tslint:disable-next-line:max-line-length */}
+            {isAddressValid(this.state.toAddress) || <ErrorMessage>{t('invalidAddress')}</ErrorMessage>}
+            <div style={{ height: 17 }} />
+            <FeeSection>
+              <Fee
+                address={this.props.account.address}
+                toAddress={this.state.toAddress}
+                handleFeeChange={this.changeFee}
+              />
+            </FeeSection>
+            <Section>
+              <Confirm
+                network={this.props.settings.network}
+                color={this.props.settings.color}
+                extrinsic={this.state.extrinsic}
+                trigger={submitButton}
+                fromAddress={this.props.account.address}
+                amount={this.inputValueToBn(this.state.amount, this.state.amountSi)}
+                tip={this.inputValueToBn(this.state.tip, this.state.tipSi)}
+                toAddress={this.state.toAddress}
+                fee={this.state.fee!}
+                senderAvailable={this.state.senderAvailable}
+                confirm={this.confirm}
+                open={this.state.modalOpen}
+                handleModal={this.changeModal}
+              />
+            </Section>
+          </div>
         </Form>
 
       </ContentContainer>
@@ -351,10 +365,23 @@ class Send extends React.Component<ISendProps, ISendState> {
   }
 }
 
+const DividerSection = styled.div`
+  width: 100%
+  margin: 8px 0 9px
+  text-align: center
+`
+
+const FeeSection = styled.div`
+  width: 100%
+  margin: -5px 0 -4px
+  text-align: center
+`
+
 const mapStateToProps = (state: IAppState) => {
   return {
     apiContext: state.apiContext,
     settings: state.settings,
+    account: state.settings.selectedAccount,
     transactions: state.transactions
   }
 }

@@ -251,7 +251,91 @@
   "invalidAddress": {
     "message": "无效地址"
   },
+  "sign": {
+    "message": "签名"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "scan": {
+    "message": "请用相机扫描"
+  },
+  "action": {
+    "message": "行动"
+  },
+  "dest": {
+    "message": "目标"
+  },
+  "value": {
+    "message": "数额"
+  },
   "clickToQRCode": {
     "message": "显示QR Code格式"
+  },
+  "networkError": {
+    "message": "网络连接异常"
+  },
+  "approve": {
+    "message": "同意"
+  },
+  "reject": {
+    "message": "拒绝"
+  },
+  "authDesc": {
+    "message": "请求访问你的账户"
+  },
+  "accessAlert": {
+    "message": "该请求来自"
+  },
+  "approveAlert": {
+    "message": "点击同意会让该应用访问你的账户地址"
+  },
+  "positiveNumber": {
+    "message": "必须大于0"
+  },
+  "notNegative": {
+    "message": "不能是负数"
+  },
+  "requestNotFound": {
+    "message": "无法找到请求"
+  },
+  "unableHandleMessage": {
+    "message": "无法处理消息类型"
+  },
+  "timerElapsed": {
+    "message": "账号创建超时了"
+  },
+  "passwordMismatch": {
+    "message": "密码不匹配"
+  },
+  "passwordLength": {
+    "message": "密码最小长度是8"
+  },
+  "create": {
+    "message": "创建"
+  },
+  "newPassword": {
+    "message": "新密码"
+  },
+  "repeatPassword": {
+    "message": "重复新密码"
+  },
+  "chainSearch": {
+    "message": "搜索链"
+  },
+  "selectChainDesc": {
+    "message": "请选择你要用的链"
+  },
+  "notEnoughBalance": {
+    "message": "余额不足"
+  },
+  "transactionError": {
+    "message": "交易出现错误"
+  },
+  "processingTx": {
+    "message": "正在处理交易，请稍候..."
+  },
+  "connecting": {
+    "message": "正在连接网络，请稍候..."
   }
 }

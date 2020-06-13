@@ -1,12 +1,22 @@
 import { browser } from 'webextension-polyfill-ts'
 import { KeyringPair$Json } from '@polkadot/keyring/types'
 import * as FUNCS from '../constants/keyring-vault-funcs'
-import { SignerOptions } from '@polkadot/api/types'
-import { IExtrinsic } from '@polkadot/types/types'
+import { SignerPayloadJSON } from '@polkadot/types/types'
 import { PORT_KEYRING } from '../constants/ports'
 import { SimpleAccounts } from '../background/types'
 
 const port = browser.runtime.connect(undefined, { name: PORT_KEYRING })
+
+export function init (): Promise<boolean> {
+  return new Promise<boolean>(resolve => {
+    port.onMessage.addListener(msg => {
+      if (msg.method === FUNCS.INIT) {
+        resolve(msg.result)
+      }
+    })
+    port.postMessage({ method: FUNCS.INIT })
+  })
+}
 
 export function isWalletLocked (): Promise<boolean> {
   return new Promise<boolean>(resolve => {
@@ -59,11 +69,8 @@ export function walletExists (): Promise<boolean> {
   })
 }
 
-export function signExtrinsic (extrinsic: IExtrinsic,
-                               address: string,
-                               signerOption: SignerOptions) {
+export function signExtrinsic (signerPayload: SignerPayloadJSON) {
   return new Promise<any>((resolve, reject) => {
-    const { blockHash, genesisHash, nonce, blockNumber } = signerOption
     port.onMessage.addListener(msg => {
       if (msg.method !== FUNCS.SIGN_EXTRINSIC) return
       if (msg.error) {
@@ -73,16 +80,7 @@ export function signExtrinsic (extrinsic: IExtrinsic,
     })
     port.postMessage({
       method: FUNCS.SIGN_EXTRINSIC,
-      messageExtrinsicSign: JSON.parse(JSON.stringify({
-        address,
-        blockHash,
-        genesisHash,
-        blockNumber,
-        method: extrinsic.method.toHex(),
-        era: extrinsic.era,
-        nonce,
-        version: extrinsic.version
-      }))
+      signerPayload: signerPayload
     })
   })
 }
@@ -126,7 +124,10 @@ export function generateMnemonic (): Promise<string> {
   })
 }
 
-export function createAccount (mnemonic: string, accountName?: string): Promise<KeyringPair$Json> {
+export function createAccount (
+  mnemonic: string,
+  accountName?: string | undefined
+): Promise<KeyringPair$Json> {
   return new Promise<KeyringPair$Json>((resolve, reject) => {
     port.onMessage.addListener(msg => {
       if (msg.method !== FUNCS.CREATE_ACCOUNT) return
@@ -217,4 +218,66 @@ export function importAccountFromJson (json: KeyringPair$Json, password?: string
       password: password
     })
   })
+}
+
+export function getTempPassword (): Promise<string> {
+  return new Promise<string>(resolve => {
+    port.onMessage.addListener(msg => {
+      if (msg.method === FUNCS.GET_TEMP_PASSWORD) {
+        resolve(msg.result)
+      }
+    })
+    port.postMessage({ method: FUNCS.GET_TEMP_PASSWORD })
+  })
+}
+
+export function setTempPassword (tempPassword: string): void {
+  port.postMessage({
+    method: FUNCS.SET_TEMP_PASSWORD,
+    tempPassword
+  })
+}
+
+export function getMnemonic (): Promise<string> {
+  return new Promise<string>(resolve => {
+    port.onMessage.addListener(msg => {
+      if (msg.method === FUNCS.GET_MNEMONIC) {
+        resolve(msg.result)
+      }
+    })
+    port.postMessage({ method: FUNCS.GET_MNEMONIC })
+  })
+}
+
+export function getAccountSetupTimeout (): Promise<number> {
+  return new Promise<number>(resolve => {
+    port.onMessage.addListener(msg => {
+      if (msg.method === FUNCS.GET_ACCOUNT_SETUP_TIMEOUT) {
+        resolve(msg.result)
+      }
+    })
+    port.postMessage({ method: FUNCS.GET_ACCOUNT_SETUP_TIMEOUT })
+  })
+}
+
+export function getTempAccountName (): Promise<string> {
+  return new Promise<string>(resolve => {
+    port.onMessage.addListener(msg => {
+      if (msg.method === FUNCS.GET_TEMP_ACCOUNT_NAME) {
+        resolve(msg.result)
+      }
+    })
+    port.postMessage({ method: FUNCS.GET_TEMP_ACCOUNT_NAME })
+  })
+}
+
+export function setTempAccountName (tempAccountName: string): void {
+  port.postMessage({
+    method: FUNCS.SET_TEMP_ACCOUNT_NAME,
+    tempAccountName
+  })
+}
+
+export function cancelAccountSetup (): void {
+  port.postMessage({ method: FUNCS.CANCEL_ACCOUNT_SETUP })
 }

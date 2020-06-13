@@ -20,25 +20,28 @@ interface IQRProps extends StateProps, RouteComponentProps {
 class QR extends React.Component<IQRProps> {
 
   render () {
-    if (!this.props.settings.selectedAccount) {
+    const { selectedAccount } = this.props.settings
+    if (!selectedAccount) {
       return null
     }
+
+    const { address } = selectedAccount
 
     return (
       <ContentContainer>
         <AccountDropdown qrDestination={HOME_ROUTE}/>
         <AccountSection>
-          <Balance address={this.props.settings.selectedAccount.address}/>
+          <Balance address={address}/>
         </AccountSection>
         <QRSection>
           <QRContainer>
             <QRCodeContainer>
-              <QRCode value={this.props.settings.selectedAccount.address} size={90}/>
+              <QRCode value={address} size={90}/>
             </QRCodeContainer>
           </QRContainer>
           <QRContainer>
             <PublicKey>
-              {this.props.settings.selectedAccount.address}
+              {address}
             </PublicKey>
           </QRContainer>
           <SecondaryText style={{ textAlign: 'left' }}>

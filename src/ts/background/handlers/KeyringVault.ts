@@ -4,6 +4,16 @@ import { Runtime } from 'webextension-polyfill-ts'
 
 const handle = (msg, port: Runtime.Port) => {
   switch (msg.method) {
+    case FUNCS.INIT:
+      keyringVault.init().then((result) => {
+        port.postMessage({ method: FUNCS.INIT, result: result })
+      }).catch(err => {
+        port.postMessage({
+          method: FUNCS.INIT,
+          error: { message: err.message }
+        })
+      })
+      break
     case FUNCS.IS_LOCKED:
       port.postMessage({
         method: FUNCS.IS_LOCKED,
@@ -109,7 +119,7 @@ const handle = (msg, port: Runtime.Port) => {
       break
     case FUNCS.SIGN_EXTRINSIC:
       try {
-        keyringVault.signExtrinsic(msg.messageExtrinsicSign).then(signature => {
+        keyringVault.signExtrinsic(msg.signerPayload).then(signature => {
           port.postMessage({ method: FUNCS.SIGN_EXTRINSIC, result: signature })
         })
       } catch (err) {
@@ -138,6 +148,39 @@ const handle = (msg, port: Runtime.Port) => {
           error: { message: err.message }
         })
       })
+      break
+    case FUNCS.GET_TEMP_PASSWORD:
+      port.postMessage({
+        method: FUNCS.GET_TEMP_PASSWORD,
+        result: keyringVault.getTempPassword()
+      })
+      break
+    case FUNCS.SET_TEMP_PASSWORD:
+      keyringVault.setTempPassword(msg.tempPassword)
+      break
+    case FUNCS.GET_MNEMONIC:
+      port.postMessage({
+        method: FUNCS.GET_MNEMONIC,
+        result: keyringVault.getMnemonic()
+      })
+      break
+    case FUNCS.GET_ACCOUNT_SETUP_TIMEOUT:
+      port.postMessage({
+        method: FUNCS.GET_ACCOUNT_SETUP_TIMEOUT,
+        result: keyringVault.getAccountSetupTimeout()
+      })
+      break
+    case FUNCS.GET_TEMP_ACCOUNT_NAME:
+      port.postMessage({
+        method: FUNCS.GET_TEMP_ACCOUNT_NAME,
+        result: keyringVault.getTempAccountName()
+      })
+      break
+    case FUNCS.SET_TEMP_ACCOUNT_NAME:
+      keyringVault.setTempAccountName(msg.tempAccountName)
+      break
+    case FUNCS.CANCEL_ACCOUNT_SETUP:
+      keyringVault.cancelAccountSetup()
       break
     default:
       break

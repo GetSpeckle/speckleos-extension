@@ -1,25 +1,112 @@
 import { KeyringInstance, KeyringPair, KeyringPair$Json } from '@polkadot/keyring/types'
-import Keyring from '@polkadot/keyring'
+import Keyring, { decodeAddress } from '@polkadot/keyring'
 import { LocalStore } from '../../services/local-store'
 import { mnemonicGenerate, cryptoWaitReady, mnemonicValidate } from '@polkadot/util-crypto'
 import t from '../../services/i18n'
-import { SimpleAccounts, MessageExtrinsicSign } from '../types'
-import { createType } from '@polkadot/types'
+import { SimpleAccounts } from '../types'
+import { createType, TypeRegistry } from '@polkadot/types'
+import { SignerPayloadJSON } from '@polkadot/types/types'
+import { VALIDITY_INTERVAL } from '../../constants/config'
+import { getPubkeyHex } from '../../services/address-transformer'
 
 const VAULT_KEY: string = 'speckle-vault'
+
+const registry = new TypeRegistry()
 
 class KeyringVault {
 
   private _keyring?: KeyringInstance
   private _password?: string
+  private _tempPassword?: string
+  private _tempAccountName?: string
   private _mnemonic?: string
   private simpleAccounts?: SimpleAccounts
+  private _accountSetupTimeout = 0
+  private _accountSetupTimeoutTimerId = 0
+  private _mnemonicTimeoutId = 0
 
   private get keyring (): KeyringInstance {
     if (this._keyring) {
       return this._keyring
     }
     throw new Error(t('keyringNotInit'))
+  }
+
+  init (): Promise<boolean> {
+    return cryptoWaitReady().then(() => {
+      this._keyring = new Keyring({ type: 'sr25519' })
+      return LocalStore.getValue(VAULT_KEY).then(vault => {
+        if (vault) {
+          let accounts = Object.values(vault)
+          try {
+            accounts.forEach(account => {
+              let pair = this.keyring.addFromJson(account as KeyringPair$Json)
+              this.keyring.addPair(pair)
+            })
+            return true
+          } catch (e) {
+            this.keyring.getPairs().forEach(pair => {
+              this.keyring.removePair(pair.address)
+            })
+            return Promise.reject(new Error(t('passwordError')))
+          }
+        }
+        return true
+      })
+    })
+  }
+
+  getTempPassword (): string {
+    return this._tempPassword || ''
+  }
+
+  setTempPassword (tempPassword: string): void {
+    // Update the password and start the timer only if user has changed the password
+    if (this._tempPassword !== tempPassword) {
+      this._tempPassword = tempPassword
+
+      // Start timer for password expiry
+      this.startExpiryTimer()
+    }
+  }
+
+  clearTempPassword (): void {
+    this._tempPassword = undefined
+  }
+
+  getTempAccountName (): string {
+    return this._tempAccountName || ''
+  }
+
+  setTempAccountName (tempAccountName: string): void {
+    // Update the account name
+    if (this._tempAccountName !== tempAccountName) {
+      this._tempAccountName = tempAccountName
+    }
+  }
+
+  getAccountSetupTimeout (): number {
+    return this._accountSetupTimeout
+  }
+
+  cancelAccountSetup (): void {
+    this.clearExpiryTimer()
+    this.clearTempPassword()
+    this.clearMnemonic(true)
+  }
+
+  startExpiryTimer (): void {
+    this._accountSetupTimeout = VALIDITY_INTERVAL
+
+    this._accountSetupTimeoutTimerId = window.setInterval(() => {
+      this._accountSetupTimeout = (this._accountSetupTimeout as number) - 1
+    }, 1000)
+  }
+
+  clearExpiryTimer (): void {
+    clearInterval(this._accountSetupTimeoutTimerId)
+    this._accountSetupTimeout = 0
+    this._accountSetupTimeoutTimerId = 0
   }
 
   isLocked (): boolean {
@@ -36,7 +123,7 @@ class KeyringVault {
     this._keyring = undefined
   }
 
-  unlock (password: string): Promise<Array<KeyringPair$Json>> {
+  async unlock (password: string): Promise<KeyringPair$Json[]> {
     if (this.isUnlocked()) {
       return new Promise<Array<KeyringPair$Json>>(
         resolve => {
@@ -45,10 +132,8 @@ class KeyringVault {
       )
     }
     if (!password.length) return Promise.reject(new Error(t('passwordError')))
-    // this will be redundant if we have polkadot js api initialisation
-    return cryptoWaitReady().then(async () => {
-      this._keyring = new Keyring({ type: 'sr25519' })
-      let vault = await LocalStore.getValue(VAULT_KEY)
+    if (!this._keyring) await this.init()
+    return LocalStore.getValue(VAULT_KEY).then(vault => {
       if (vault) {
         let accounts = Object.values(vault)
         try {
@@ -58,7 +143,7 @@ class KeyringVault {
             this.keyring.addPair(pair)
           })
           this._password = password
-          return accounts as Array<KeyringPair$Json>
+          return accounts as KeyringPair$Json[]
         } catch (e) {
           this.keyring.getPairs().forEach(pair => {
             this.keyring.removePair(pair.address)
@@ -78,8 +163,39 @@ class KeyringVault {
   generateMnemonic (): string {
     if (!this._mnemonic) {
       this._mnemonic = mnemonicGenerate()
+
+      if (this._accountSetupTimeoutTimerId === 0) {
+        // Start timer for mnemonic expiry
+        this.startExpiryTimer()
+      }
+
+      // Work-around to avoid timer elapsing before time left on the UI.
+      // Root cause: Upon re-opening the Popup, background service is paused for a moment.
+      const timeout = (this._accountSetupTimeout + 1) * 1000
+
+      this._mnemonicTimeoutId = window.setTimeout(() => {
+        this.clearTempPassword()
+        this.clearMnemonic(false)
+        this.clearExpiryTimer()
+        this._mnemonicTimeoutId = 0
+      }, timeout)
     }
     return this._mnemonic
+  }
+
+  getMnemonic (): string {
+    return this._mnemonic || ''
+  }
+
+  clearMnemonic (isCancelled: boolean): void {
+    this._mnemonic = undefined
+    this._tempAccountName = undefined
+
+    // On cancelling account setup, remove `setTimeout` timer
+    if (isCancelled) {
+      window.clearTimeout(this._mnemonicTimeoutId)
+      this._mnemonicTimeoutId = 0
+    }
   }
 
   isMnemonicValid (mnemonic: string): boolean {
@@ -97,7 +213,11 @@ class KeyringVault {
       let accounts = Object.values(vault)
       this.simpleAccounts = accounts.map(account => {
         const keyringPairJson = (account as KeyringPair$Json)
-        return { address: keyringPairJson.address, name: keyringPairJson.meta.name }
+        return {
+          address: keyringPairJson.address,
+          genesisHash: keyringPairJson.meta.genesisHash,
+          name: keyringPairJson.meta.name
+        }
       })
       return this.simpleAccounts
     })
@@ -108,7 +228,9 @@ class KeyringVault {
     if (this._mnemonic !== mnemonic) return Promise.reject(new Error(t('mnemonicUnmatched')))
     return cryptoWaitReady().then(() => {
       let pair = this.keyring.addFromUri(mnemonic, { name: accountName })
-      this._mnemonic = undefined
+      this.clearTempPassword()
+      this.clearMnemonic(false)
+      this.clearExpiryTimer()
       return this.saveAccount(pair)
     })
   }
@@ -126,7 +248,7 @@ class KeyringVault {
     this.keyring.removePair(address)
     LocalStore.getValue(VAULT_KEY).then(async (vault) => {
       if (vault) {
-        delete vault[address]
+        delete vault[getPubkeyHex(address)]
         await LocalStore.set({ VAULT_KEY: vault })
       }
     })
@@ -165,21 +287,26 @@ class KeyringVault {
     }
   }
 
-  signExtrinsic = async (messageExtrinsicSign: MessageExtrinsicSign): Promise<string> => {
-    const { address } = messageExtrinsicSign
+  signExtrinsic = async (signerPayload: SignerPayloadJSON): Promise<string> => {
+    const { address } = signerPayload
     const pair = this.keyring.getPair(address)
-
     if (!pair) {
-      return Promise.reject(new Error('Unable to find pair'))
+      return Promise.reject(new Error(t('accountNotFound')))
     }
-    const payload = createType('ExtrinsicPayload', messageExtrinsicSign)
+    let params = { version: signerPayload.version }
+    const payload = createType(registry, 'ExtrinsicPayload', signerPayload, params)
+    if (pair.isLocked) {
+      pair.decodePkcs8(this._password)
+    }
     const result = payload.sign(pair)
     return Promise.resolve(result.signature)
   }
 
   accountExists = (address: string): boolean => {
     return !!this.simpleAccounts &&
-      this.simpleAccounts!!.filter(account => account.address === address).length > 0
+      this.simpleAccounts!!.filter(
+        account => decodeAddress(account.address).toString() === decodeAddress(address).toString()
+      ).length > 0
   }
 
   getPair = (address: string): KeyringPair => {
@@ -187,13 +314,13 @@ class KeyringVault {
   }
 
   private saveAccount (pair: KeyringPair): Promise<KeyringPair$Json> {
-    this.addTimestamp(pair)
+    KeyringVault.addTimestamp(pair)
     const keyringPair$Json: KeyringPair$Json = pair.toJson(this._password)
     return LocalStore.getValue(VAULT_KEY).then(vault => {
       if (!vault) {
         vault = {}
       }
-      vault[keyringPair$Json.address] = keyringPair$Json
+      vault[getPubkeyHex(keyringPair$Json.address)] = keyringPair$Json
       return LocalStore.setValue(VAULT_KEY, vault).then(() => {
         this.keyring.addPair(pair)
         return keyringPair$Json
@@ -201,7 +328,7 @@ class KeyringVault {
     })
   }
 
-  private addTimestamp (pair: KeyringPair): void {
+  private static addTimestamp (pair: KeyringPair): void {
     if (!pair.meta.whenCreated) {
       pair.setMeta({ ...pair.meta, whenCreated: Date.now() })
     }

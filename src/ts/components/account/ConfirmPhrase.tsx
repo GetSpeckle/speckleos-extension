@@ -4,20 +4,22 @@ import Progress from './Progress'
 import { IAppState } from '../../background/store/all'
 import { withRouter, RouteComponentProps } from 'react-router'
 import { connect } from 'react-redux'
-import { Message, List, Button, Icon, Form } from 'semantic-ui-react'
-import { createAccount, unlockWallet } from '../../services/keyring-vault-proxy'
+import { Message, List, Button, Icon, Form, Grid } from 'semantic-ui-react'
+import { cancelAccountSetup, createAccount, unlockWallet } from '../../services/keyring-vault-proxy'
 import {
   Button as StyledButton,
   ContentContainer,
   Section,
-  BasicSection
+  BasicSection,
+  TimerText
 } from '../basic-components'
-import { SELECT_NETWORK_ROUTE } from '../../constants/routes'
+import { CREATE_PASSWORD_ROUTE, HOME_ROUTE, SELECT_NETWORK_ROUTE } from '../../constants/routes'
 import { KeyringPair$Json } from '@polkadot/keyring/types'
-import { setLocked, setCreated, setNewPhrase } from '../../background/store/wallet'
+import { setLocked, setCreated, setNewPhrase, setAccountName, setNewPassword } from '../../background/store/wallet'
 import { setError } from '../../background/store/error'
 import { saveSettings } from '../../background/store/settings'
 import { colorSchemes } from '../styles/themes'
+import { parseTimeLeft } from '../../constants/utils'
 
 interface IConfirmPhraseProps extends StateProps, DispatchProps, RouteComponentProps {}
 
@@ -25,6 +27,8 @@ interface IConfirmPhraseState {
   candidateList: Array<string>
   confirmList: Array<string>
   keyringPair: KeyringPair$Json | null
+  isCancelled: boolean
+  isConfirming: boolean
 }
 
 type ListType = 'candidateList' | 'confirmList'
@@ -34,7 +38,9 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
   state: IConfirmPhraseState = {
     candidateList: [],
     confirmList: [],
-    keyringPair: null
+    keyringPair: null,
+    isCancelled: false,
+    isConfirming: false
   }
 
   componentDidMount () {
@@ -44,12 +50,36 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
     }
   }
 
+  componentDidUpdate (prevProps) {
+    // Check for timer expiry and skip if the user is trying to create account
+    if (
+      !this.state.isConfirming &&
+      this.props.wallet.accountSetupTimeout === 0 &&
+      prevProps.wallet.accountSetupTimeout !== 0
+    ) {
+      // Clear wallet state defaults
+      this.props.setNewPassword('')
+      this.props.setNewPhrase('')
+      this.props.setAccountName('')
+
+      // If wallet is created, redirect to Dashboard. If not, Create Password page
+      if (this.props.wallet.created) {
+        this.props.history.push(HOME_ROUTE)
+      } else {
+        this.props.history.push({
+          pathname: CREATE_PASSWORD_ROUTE,
+          state: { error: this.state.isCancelled ? null : 'Account creation timer has elapsed' }
+        })
+      }
+    }
+  }
+
   /**
    * Shuffles array in place.
    * @param {Array} a items An array containing the items.
    */
   private shuffle = (a: Array<string>): Array<string> => {
-    let i = 0
+    let i
     for (i = a.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1))
       let x = a[i]
@@ -64,8 +94,10 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
         && this.props.wallet.newPhrase === this.state.confirmList.join(' ')
   }
 
-  createAccount = (phrase: string, name?: string) => {
-    const { wallet, saveSettings, settings, setNewPhrase, setCreated, setError } = this.props
+  createAccount = (phrase: string, name?: string | undefined) => {
+    // tslint:disable-next-line:max-line-length
+    const { wallet, saveSettings, settings, setNewPhrase, setCreated, setError, setAccountName } = this.props
+
     createAccount(phrase, name).then(keyringPair => {
       this.setState({ keyringPair })
       // use new created account as the selected account
@@ -74,7 +106,8 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
             { name: keyringPair.meta.name, address: keyringPair.address }
         }
       )
-      setNewPhrase('', '')
+      setNewPhrase('')
+      setAccountName('')
       if (!wallet.created) {
         setCreated(true)
       }
@@ -94,7 +127,9 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
 
     // add a new account using the same pass
     if (!wallet.locked && wallet.created) {
-      this.createAccount(wallet.newPhrase, wallet.newAccountName)
+      this.setState({ isConfirming: true }, () => {
+        this.createAccount(wallet.newPhrase as string, wallet.newAccountName)
+      })
       return
     }
 
@@ -104,9 +139,14 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
       setLocked(false)
       console.assert(kp.length === 0, 'Should be an empty array')
       if (wallet.newPhrase) {
-        this.createAccount(wallet.newPhrase, wallet.newAccountName)
+        this.setState({ isConfirming: true }, () => {
+          this.createAccount(wallet.newPhrase as string, wallet.newAccountName)
+        })
       }
-    }).catch(err => { setError(err) })
+    }).catch(err => {
+      setError(err)
+      this.setState({ isConfirming: false })
+    })
   }
 
   downloadKeyPair = () => {
@@ -121,6 +161,10 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
 
     element.click()
     document.body.removeChild(element)
+  }
+
+  handleCancel = () => {
+    this.setState({ isCancelled: true }, () => cancelAccountSetup())
   }
 
   handleClick = () => {
@@ -143,6 +187,8 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
       this.renderItem('confirmList', item, index))
     const candidateListItems = this.state.candidateList.map((item, index) =>
       this.renderItem('candidateList', item, index))
+    const { accountSetupTimeout } = this.props.wallet
+
     return(
       <ContentContainer>
         <Form>
@@ -162,12 +208,20 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
           <Message negative={true} hidden={this.isPhraseConfirmed()}>
             {t('phraseMismatch')}
           </Message>
-          <Section>
-            <StyledButton onClick={this.create} disabled={!this.isPhraseConfirmed()}>
-              {t('confirmPhraseButton')}
-            </StyledButton>
-          </Section>
+
+          <Grid columns='equal'>
+            <Grid.Column>
+              <Button fluid={true} onClick={this.handleCancel}>Cancel</Button>
+            </Grid.Column>
+            <Grid.Column>
+              <StyledButton onClick={this.create} disabled={!this.isPhraseConfirmed()}>
+                {t('confirmPhraseButton')}
+              </StyledButton>
+            </Grid.Column>
+          </Grid>
         </Form>
+        {/* tslint:disable-next-line:max-line-length */}
+        {accountSetupTimeout > 0 && <TimerText>{parseTimeLeft(accountSetupTimeout)} left</TimerText>}
       </ContentContainer>
     )
   }
@@ -179,7 +233,7 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
     }
 
     return(
-      <List.Item>
+      <List.Item key={index}>
         <Button onClick={this.handleClickItem.bind(this, type, index)} style={itemStyle}>
           {item}
         </Button>
@@ -201,10 +255,15 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
   }
 
   renderBackupScreen () {
+    const { color } = this.props.settings
+    const proceedButtonStyle = {
+      backgroundColor: colorSchemes[color].backgroundColor,
+      color: 'white'
+    }
     return(
       <ContentContainer>
         <Section>
-          <Message info={true}>
+          <Message info={true} color={color}>
             {t('backupKeypairMessage')}
           </Message>
         </Section>
@@ -217,7 +276,7 @@ class ConfirmPhrase extends React.Component<IConfirmPhraseProps, IConfirmPhraseS
         </Section>
 
         <Section>
-          <Button onClick={this.handleClick} primary={true} fluid={true}>
+          <Button onClick={this.handleClick} style={proceedButtonStyle} fluid={true}>
             <Icon name='play' />
             {t('proceedButton')}
           </Button>
@@ -234,7 +293,15 @@ const mapStateToProps = (state: IAppState) => {
   }
 }
 
-const mapDispatchToProps = { saveSettings, setLocked, setCreated, setError, setNewPhrase }
+const mapDispatchToProps = {
+  saveSettings,
+  setLocked,
+  setCreated,
+  setError,
+  setNewPhrase,
+  setAccountName,
+  setNewPassword
+}
 
 type StateProps = ReturnType<typeof mapStateToProps>
 

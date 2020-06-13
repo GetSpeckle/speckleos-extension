@@ -11,25 +11,30 @@ import { displayAddress } from '../../services/address-transformer'
 interface ITransactionListProps extends StateProps, DispatchProps, RouteComponentProps {}
 
 interface ITransactionListState {
-  currentAddress: string
+  currentAddress: string,
+  currentNetwork: string
 }
 
 class TransactionList extends React.Component<ITransactionListProps, ITransactionListState> {
 
   state = {
-    currentAddress: ''
+    currentAddress: '',
+    currentNetwork: ''
   }
 
   static getDerivedStateFromProps (nextProps, prevState) {
     if (nextProps.account && nextProps.account.address !== prevState.currentAddress) {
       return { currentAddress: nextProps.account.address }
+    } else if (nextProps.network !== prevState.currentNetwork) {
+      return { currentNetwork: nextProps.network }
     } else {
       return null
     }
   }
 
   componentDidUpdate (_prevProps, prevState) {
-    if (prevState.currentAddress !== this.state.currentAddress) {
+    if (prevState.currentNetwork !== this.state.currentNetwork
+        || prevState.currentAddress !== this.state.currentAddress) {
       this.loadTransactions()
     }
   }
@@ -39,25 +44,21 @@ class TransactionList extends React.Component<ITransactionListProps, ITransactio
   }
 
   private loadTransactions = () => {
-    // load the transaction list
-    if (this.state.currentAddress) {
-      console.log('Getting transactions for ' + this.state.currentAddress)
-      this.props.getTransactions(this.state.currentAddress)
+    if (this.state.currentAddress && this.state.currentNetwork) {
+      this.props.getTransactions(this.state.currentAddress, this.state.currentNetwork)
     }
   }
 
   render () {
 
-    const account = this.props.account
-    if (!account || !(this.props.transactions)) {
-      console.log('No transaction found.')
+    if (!this.props.account || !this.props.transactions) {
       return null
     }
 
-    console.log('Rendering transactions: ', this.props.transactions)
-
     const panes = [
-      { menuItem: t('tabSent'), render: () => this.renderWithFilter('Sent') }
+      { menuItem: t('tabAll'), render: () => this.renderWithFilter('') },
+      { menuItem: t('tabSent'), render: () => this.renderWithFilter('Sent') },
+      { menuItem: t('tabStaked'), render: () => this.renderWithFilter('Staked') }
     ]
 
     const color = this.props.color
@@ -80,8 +81,6 @@ class TransactionList extends React.Component<ITransactionListProps, ITransactio
     if (type !== '') {
       tranx = tranx.filter(item => item.type === type)
     }
-
-    console.log('prepare to render transactions ... ', tranx)
 
     return (
       <Tab.Pane>
@@ -121,6 +120,7 @@ class TransactionList extends React.Component<ITransactionListProps, ITransactio
     }
 
     const txBaseUrl = networks[this.props.network].txExplorer
+    const symbol = networks[this.props.network].tokenSymbol
 
     return (
       <List.Item key={index} style={borderStyle}>
@@ -128,7 +128,7 @@ class TransactionList extends React.Component<ITransactionListProps, ITransactio
           <Grid.Row>
           <Grid.Column width={5} verticalAlign='middle'>
             <div className='tran-amount' title={'Fee: ' + tran.fee}>
-              {(tran.type === 'Sent' ? '-' : '') + tran.amount + tran.unit + ' DOTS'}
+              {(tran.type === 'Sent' ? '-' : '') + tran.amount + tran.unit + ' ' + symbol}
             </div>
             <div className='tran-time' title={createTimeFull}>
               {createTime}

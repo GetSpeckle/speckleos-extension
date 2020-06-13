@@ -1,8 +1,8 @@
-import styled from 'styled-components'
-import { Overlay } from './Overlay'
-import { Button, Icon, Modal } from 'semantic-ui-react'
 import * as React from 'react'
-import Identicon from 'polkadot-identicon'
+import styled from 'styled-components'
+import { Button as BasicButton, Icon, Image, Modal } from 'semantic-ui-react'
+import { Button } from '../basic-components'
+import Identicon from '@polkadot/react-identicon'
 import 'react-tippy/dist/tippy.css'
 import { Tooltip } from 'react-tippy'
 import t from '../../services/i18n'
@@ -10,39 +10,47 @@ import { colorSchemes } from '../styles/themes'
 import { IExtrinsic } from '@polkadot/types/types'
 import { formatBalance } from '@polkadot/util'
 import BN = require('bn.js')
+import { networks } from '../../constants/networks'
 
 interface IConfirmProps {
   network: string,
   trigger: any,
   fromAddress: string,
   amount: BN,
+  tip: BN,
   toAddress: string,
   fee: BN,
-  creationFee: BN,
-  existentialDeposit: BN,
   extrinsic?: IExtrinsic | null,
   color: string,
-  recipientAvailable: BN,
-  confirm: any
-  open: boolean
+  senderAvailable: BN,
+  confirm: any,
+  open: boolean,
   handleModal: any
 }
 
 interface IConfirmState {
-  status: string,
-  extHash?: string | null, // Get ext hash from saved extrinsic
-  message?: string,
-  msgTimeout?: any,
+  addressCopied: boolean,
+  copiedTimeout?: any
 }
+
+const formatOptions = { withSi: true }
+
+const delay = 1500
 
 export default class Confirm extends React.Component<IConfirmProps, IConfirmState> {
 
   state: IConfirmState = {
-    status: '',
-    extHash: this.props.extrinsic === undefined ? null : this.props.extrinsic!.hash.toHex()
+    addressCopied: false
+  }
+
+  componentWillUnmount () {
+    if (this.state.copiedTimeout) {
+      clearTimeout(this.state.copiedTimeout)
+    }
   }
 
   handleClose = () => this.props.handleModal(false)
+
   handleConfirm = () => {
     this.handleClose()
     this.props.confirm()
@@ -63,11 +71,11 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
     document.execCommand('copy')
     document.body.removeChild(el)
 
-    this.setState({ message: t('copyAddressMessage') })
+    this.setState({ addressCopied: true })
     const timeout = setTimeout(() => {
-      this.setState({ message: '' })
-    }, 100)
-    this.setState({ msgTimeout: timeout })
+      this.setState({ addressCopied: false })
+    }, delay)
+    this.setState({ copiedTimeout: timeout })
   }
 
   copyFromAddressToClipboard = () => this.copyToClipboard(this.props.fromAddress)
@@ -75,36 +83,9 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
   copyToAddressToClipboard = () => this.copyToClipboard(this.props.toAddress)
 
   render () {
-
-    // Conditional Rendering for warning article
-    const doesNotExist = this.props.recipientAvailable.cmp(this.props.existentialDeposit) < 0
-    let warning
-    if (doesNotExist) {
-      warning = (
-        <Section style={{ 'marginTop': '-10px' }}>
-          <Info>
-            <Warning>
-              <div>
-                <Icon name='warning sign' size={'small'}/>
-                The final recipient balance is less or equal
-                to {formatBalance(this.props.existentialDeposit)} (the
-                existential amount) and will
-                not be reflected
-              </div>
-              <div>
-                <Icon name='warning sign' size={'small'}/>
-                A fee of {formatBalance(this.props.creationFee)} will be
-                deducted from the sender
-                since the destination account does not exist
-              </div>
-            </Warning>
-          </Info>
-        </Section>
-      )
-    } else {
-      warning = null
-    }
-
+    const network = networks[this.props.network]
+    const identiconTheme = network.identiconTheme
+    const totalFee = this.props.amount.add(this.props.fee).add(this.props.tip)
     return (
       <Modal
         trigger={this.props.trigger}
@@ -115,11 +96,12 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
         <UpperSection>
           <Offset>
             <Status>
-              <Identicon account={this.props.fromAddress} size={48}/>
+              <Identicon value={this.props.fromAddress} size={48} theme={identiconTheme}/>
             </Status>
           </Offset>
           <Tooltip
-            title={!this.state.message ? t('copyToClipboard') : t('copiedExclam')}
+            title={!this.state.addressCopied ? t('copyToClipboard') : t('copiedExclam')}
+            duration={delay}
             position='bottom'
             trigger='mouseenter'
             arrow={true}
@@ -134,19 +116,23 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
           <Subheading>Review your extrinsic details</Subheading>
         </UpperSection>
         <OverlaySection>
-          <Overlay/>
+          <Image
+            src='/assets/overlay.svg'
+            centered={true}
+          />
         </OverlaySection>
         <Section>
           <FromTo color={colorSchemes[this.props.color].backgroundColor}>
             <Icon name='arrow circle right' size={'big'} style={{ 'marginLeft': '10px' }}/>
             <Identicon
-              account={this.props.toAddress}
+              value={this.props.toAddress}
               size={28}
               style={{ 'marginRight': '5px' }}
+              theme={identiconTheme}
             />
             <To>
               <Tooltip
-                title={!this.state.message ? t('copyToClipboard') : t('copiedExclam')}
+                title={!this.state.addressCopied ? t('copyToClipboard') : t('copiedExclam')}
                 position='bottom'
                 trigger='mouseenter'
                 arrow={true}
@@ -156,7 +142,7 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
                   </span>
               </Tooltip>
               <AvailableBalance>
-                <p>Available: {formatBalance(this.props.recipientAvailable)}</p>
+                <p>Available: {formatBalance(this.props.senderAvailable, formatOptions)}</p>
               </AvailableBalance>
             </To>
           </FromTo>
@@ -164,42 +150,34 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
         <Section style={{ 'marginTop': '8px' }}>
           <Info>
             <Key>Fee</Key>
-            <Value>{formatBalance(this.props.fee)}</Value>
+            <Value>{formatBalance(this.props.fee, formatOptions)}</Value>
           </Info>
           <div style={{ 'border': '1px solid gray' }}/>
         </Section>
         <Section style={{ 'marginTop': '8px' }}>
           <Info>
             <Key>Amount</Key>
-            <Value>{formatBalance(this.props.amount)}</Value>
+            <Value>{formatBalance(this.props.amount, formatOptions)}</Value>
+          </Info>
+        </Section>
+        <Section style={{ 'marginTop': '8px' }}>
+          <Info>
+            <Key>Tip</Key>
+            <Value>{formatBalance(this.props.tip, formatOptions)}</Value>
           </Info>
         </Section>
         <Section style={{ 'marginTop': '8px', 'marginBottom': '16px' }}>
           <Info>
             <Key>Total</Key>
-            <Value>{formatBalance(this.props.amount.add(this.props.fee))}</Value>
+            <Value>
+              {formatBalance(totalFee, formatOptions)}
+            </Value>
           </Info>
         </Section>
-        {warning}
-        <Section>
+        <Section style={{ 'marginTop': '20px' }}>
           <Info>
-            <div style={{ 'fontSize': '11px' }}>
-              <div>
-                <Icon name='arrow right' size={'small'}/>
-                Fees include the transaction fee and the per-byte fee
-              </div>
-            </div>
-          </Info>
-        </Section>
-        <Section style={{ 'marginTop': '16px' }}>
-          <Info>
-            <Button onClick={this.handleClose}>Cancel</Button>
-            <ConfirmButton
-              color={colorSchemes[this.props.color].backgroundColor}
-              onClick={this.handleConfirm}
-            >
-              Confirm
-            </ConfirmButton>
+            <BasicButton style={{ width: '45%' }} onClick={this.handleClose}>Cancel</BasicButton>
+            <Button style={{ width: '45%' }} onClick={this.handleConfirm}>Confirm</Button>
           </Info>
         </Section>
       </Modal>
@@ -213,14 +191,13 @@ const UpperSection = styled.div`
   text-align: center
 `
 const Offset = styled.div`
-width: 100%
-margin-top:-34px;
-display: flex;
-justify-content: center;
-margin-bottom: 8px;
+  width: 100%
+  margin-top:-34px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
 `
 const Heading = styled.h3`
-{
   margin-top: 8px;
   margin-bottom: 4px;
   font-family: Nunito;
@@ -231,11 +208,9 @@ const Heading = styled.h3`
   line-height: normal;
   letter-spacing: normal;
   color: #30383b;
-}
 `
 
 const Subheading = styled.p`
-{
   font-family: Nunito;
   font-size: 11px;
   font-weight: normal;
@@ -244,7 +219,6 @@ const Subheading = styled.p`
   line-height: normal;
   letter-spacing: normal;
   color: #a0aeb4;
-}
 `
 
 const OverlaySection = styled.div`
@@ -254,15 +228,13 @@ const OverlaySection = styled.div`
 `
 
 const Status = styled.div`
-  {
-    width: 50px;
-    height: 50px;
-    border-radius: 100%;
-    background-color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+  width: 50px;
+  height: 50px;
+  border-radius: 100%;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `
 
 const Key = styled.p`
@@ -287,11 +259,7 @@ const Value = styled.p`
   color: #30383b;
 `
 
-interface MarginProps {
-  margin?: string | null
-}
-
-const Section = styled.div<MarginProps>`
+const Section = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -311,23 +279,11 @@ const FromTo = styled.div`
  `
 
 const Info = styled.div`
-   width: 80%;
-   display: flex;
-   flex-direction: row;
-   align-items: center;
-   justify-content: space-between;
-`
-
-const Warning = styled.div`
-  background: #ffffe0;
-  border-color: #eeeeae;
-  font-size: 11px;
-  margin-top: 0px;
-`
-
-const ConfirmButton = styled(Button)`
-  background-color: ${props => props.color}!important;
-  color: #fff!important;
+  width: 80%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 `
 
 const To = styled.div`

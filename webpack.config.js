@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const {CheckerPlugin} = require('awesome-typescript-loader');
 const ChromeExtensionReloader = require('webpack-chrome-extension-reloader');
 
@@ -15,7 +15,6 @@ const pkgJson = require('./package.json');
 module.exports = {
   entry: {
     background: path.join(sourceRootPath, 'ts', 'background', 'index.ts'),
-    options: path.join(sourceRootPath, 'ts', 'options', 'index.tsx'),
     popup: path.join(sourceRootPath, 'ts', 'popup', 'index.tsx'),
     speckle: path.join(sourceRootPath, 'ts', 'page', 'index.ts'),
     content: path.join(sourceRootPath, 'ts', 'content', 'index.tsx')
@@ -36,13 +35,6 @@ module.exports = {
   },
   plugins: [
     new CheckerPlugin(),
-    new HtmlWebpackPlugin({
-      template: path.join(sourceRootPath, 'html', 'options.html'),
-      inject: 'body',
-      filename: 'options.html',
-      title: 'Speckle- Options Page',
-      chunks: ['options'],
-    }),
     new HtmlWebpackPlugin({
       template: path.join(sourceRootPath, 'html', 'popup.html'),
       inject: 'body',
@@ -85,7 +77,6 @@ if (nodeEnv === 'watch') {
       reloadPage: true,
       entries: {
         background: 'background',
-        options: 'options',
         popup: 'popup',
         contentScript: ['content'],
       }
@@ -94,5 +85,5 @@ if (nodeEnv === 'watch') {
 }
 
 if (nodeEnv === 'production') {
-  module.exports.plugins.push(new CleanWebpackPlugin({outputPath: distRootPath, verbose: true, dry: false}));
+  module.exports.plugins.push(new CleanWebpackPlugin({verbose: true, dry: false}));
 }

@@ -9,7 +9,7 @@
 }
 
 .ui.horizontal.list>.item {
-  margin: 0px 4px;
+  margin: 0 4px;
 }
 
 .ui.horizontal.list.candidate-list>.item:first-child {
@@ -28,7 +28,7 @@
 }
 
 .item>.ui.button {
-  margin: 0px;
+  margin: 0;
   padding: 4px;
   font-weight: normal;
   border-radius: 2px;
@@ -38,7 +38,7 @@
   opacity: 0.6;
   color: #3e5860;
   font-weight: 700;
-  font-family: Avenir;
+  font-family: Avenir, serif;
   font-size: 11px;
   margin: 0 0 .28571429rem 0;
 }
@@ -60,12 +60,22 @@
   border-radius: 1em;
   border: solid 1px white;
   line-height: normal;
-  background-color: rgba(0,0,0,0);
+  background-color: inherit;
   color: white;
   padding-top: 5px;
   padding-bottom: 5px;
   min-height: min-content;
   z-index: 2;
+}
+
+.top-menu .ui.selection.dropdown.chain .menu {
+  background-color: inherit;
+}
+
+.top-menu .ui.selection.dropdown.chain .visible.transition {
+  border-bottom-left-radius: 12px!important;
+  border-bottom-right-radius: 12px!important;
+  border-color: white!important;
 }
 
 .top-menu>.ui.grid>.column:not(.row) {
@@ -159,6 +169,12 @@
   color: white;
 }
 
+.ui.negative.floating.message {
+  width: 311px;
+  margin: auto;
+  padding: 0.5em 1.5em;
+  text-align: center;
+}
 /*
  This css caused the white screen issue on firefox
 .ui.active.dropdown.account-dropdown:hover {
@@ -169,18 +185,18 @@
 
 .item .account-item {
   display: inline-block;
-  margin: 0px 4px
+  margin: 0 4px
 }
 
 .account-item .item-name {
-  font-family: Nunito;
+  font-family: Nunito, serif;
   font-size: 14px;
   font-weight: bold;
   color: #ffffff
 }
 
 .account-item .item-address {
-  font-family: Nunito;
+  font-family: Nunito, serif;
   font-size: 10px;
   color: #ffffff
 }
@@ -198,7 +214,7 @@
 }
 
 .ui.menu {
-  font-family: Nunito;
+  font-family: Nunito, serif;
   font-size: 13px;
 }
 
@@ -244,12 +260,12 @@
 
 .tran-amount {
   font-size: 12px;
-  padding: 3px 0px;
+  padding: 3px 0;
 }
 
 .tran-time {
   font-size: 9px;
-  padding: 3px 0px;
+  padding: 3px 0;
 }
 
 .tran-address {
@@ -323,11 +339,11 @@
   border-radius: 4px;
   box-shadow: 0 2px 8px 0 rgba(62, 88, 96, 0.1);
   background-color: #ffffff;
-  font-family: Nunito;
+  font-family: Nunito, serif;
   font-size: 12px;
   font-weight: normal;
   color: #556267;
-  margin: 10px 0px;
+  margin: 10px 0;
   padding: 0.5em 1.5em;
 
 }
@@ -350,7 +366,7 @@
 .auth-description {
   text-align: center;
   color: #556267;
-  font-family: Nunito;
+  font-family: Nunito, serif;
 }
 
 .request-box {
@@ -361,7 +377,7 @@
   box-shadow: 0 2px 8px 0 rgba(62, 88, 96, 0.1);
   background-color: #ffffff;
   text-align: center;
-  font-family: Nunito;
+  font-family: Nunito, serif;
   color: #556267;
 }
 

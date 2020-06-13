@@ -1,37 +1,95 @@
 import * as React from 'react'
 import { connect } from 'react-redux'
 import { withRouter, RouteComponentProps } from 'react-router'
-import { Image, Grid } from 'semantic-ui-react'
+import { Dropdown, Image, DropdownProps, Dimmer, Loader } from 'semantic-ui-react'
 import { networks } from '../../constants/networks'
 import { IAppState } from '../../background/store/all'
 import { saveSettings } from '../../background/store/settings'
-import { ChainDropdown } from '../basic-components'
+import styled from 'styled-components'
+import SettingsMenu from './SettingsMenu'
+import { createApi, destroyApi } from '../../background/store/api-context'
+import { colorSchemes } from '../styles/themes'
+import { ApiOptions } from '@polkadot/api/types'
+import { WsProvider } from '@polkadot/rpc-provider'
+import t from '../../services/i18n'
 
 interface ITopMenuProps extends StateProps, DispatchProps, RouteComponentProps {}
 
 interface ITopMenuState {
-  network: string,
-  chainIconUrl: string
+  chainIconUrl: string,
+  profileIconClicked: boolean
 }
 
 class TopMenu extends React.Component<ITopMenuProps, ITopMenuState> {
 
   state = {
-    network: this.props.settings.network,
-    chainIconUrl: networks[this.props.settings.network].chain.iconUrl
+    chainIconUrl: networks[this.props.settings.network].chain.iconUrl,
+    profileIconClicked: false
   }
 
-  changeNetwork = (e, data) => {
-    console.log(e.target)
-    this.setState({
-      network: data.value,
-      chainIconUrl: networks[data.value].chain.iconUrl
-    })
-    this.props.saveSettings({ ...this.props.settings, network: data.value })
+  componentDidMount () {
+    const { apiContext } = this.props
+    if (!apiContext || !apiContext.apiReady) {
+      this.createApi()
+    }
+  }
+
+  componentDidUpdate (prevProps: Readonly<ITopMenuProps>) {
+    if (this.props.settings.network !== prevProps.settings.network) {
+      this.createApi()
+    }
+  }
+
+  createApi = () => {
+    const { settings } = this.props
+    const network = networks[settings.network]
+    const provider = new WsProvider(network.rpcServer)
+    let apiOptions: ApiOptions = { provider, types: network.types }
+    this.props.createApi(apiOptions)
+  }
+
+  destroyApi = () => {
+    const { provider } = this.props.apiContext
+    provider && provider.isConnected() && provider.disconnect()
+    this.props.destroyApi()
+  }
+
+  changeNetwork = (_e: any, { value }: DropdownProps) => {
+    if (value) {
+      const network = value.toString()
+      this.setState({
+        chainIconUrl: networks[network].chain.iconUrl
+      })
+
+      this.destroyApi()
+      this.props.saveSettings({ ...this.props.settings, network })
+    }
+  }
+
+  handleProfileIconClick = () => {
+    this.setState({ profileIconClicked: !this.state.profileIconClicked })
+  }
+
+  closeSettingsMenu = () => {
+    this.setState({ profileIconClicked: false })
+  }
+
+  renderSettingsMenu = () => {
+    const profileIconClicked = this.state.profileIconClicked
+    let settingsMenu = <span/>
+
+    if (profileIconClicked) {
+      settingsMenu = (
+        <SettingsMenu
+          topMenuProps={this.props}
+          closeSettingsMenu={this.closeSettingsMenu}
+        />
+      )
+    }
+    return settingsMenu
   }
 
   render () {
-
     const networkOptions = Object.keys(networks).map(n => {
       const network = networks[n]
       return {
@@ -42,28 +100,50 @@ class TopMenu extends React.Component<ITopMenuProps, ITopMenuState> {
       }
     })
 
-    return (
-      <div className='top-menu'>
-        <Grid centered={true} textAlign='center'>
-            <Grid.Column width={4} verticalAlign='middle'>
-              <Image src='/assets/logo-s.svg' centered={true} />
-            </Grid.Column>
+    const dropdownMenuStyle = {
+      backgroundColor: colorSchemes[this.props.settings.color].backgroundColor
+    }
 
-            <Grid.Column width={10} >
-              <ChainDropdown
-                className='chain'
+    const { apiContext } = this.props
+
+    return (
+      <div>
+        <Dimmer active={!apiContext.apiReady && !apiContext.failed}>
+          <Loader indeterminate={true}>{t('connecting')}</Loader>
+        </Dimmer>
+        <div className='top-menu'>
+          <Grid>
+            <div style={{ width: 70 }}>
+              <Image src='/assets/logo-s.svg' centered={true} />
+            </div>
+
+            <div style={{ width: 190 }}>
+              <Dropdown
+                style={dropdownMenuStyle}
+                className='selection chain'
                 fluid={true}
-                value={this.state.network}
+                value={this.props.settings.network}
                 onChange={this.changeNetwork}
                 icon={<img src={this.state.chainIconUrl} alt='Chain logo'/>}
                 options={networkOptions}
               />
-            </Grid.Column>
+            </div>
 
-            <Grid.Column width={2} verticalAlign='middle'>
-              <Image src='/assets/icon-profile.svg' centered={true} />
-            </Grid.Column>
-        </Grid>
+            <div style={{ width: 50 }}>
+              <MenuOption
+                onClick={this.handleProfileIconClick}
+                data-click={this.state.profileIconClicked}
+              >
+                <Image
+                    src='/assets/icon-profile.svg'
+                    centered={true}
+                    hidden={this.state.profileIconClicked}
+                />
+              </MenuOption>
+            </div>
+          </Grid>
+        </div>
+        {this.renderSettingsMenu()}
       </div>
     )
   }
@@ -71,13 +151,31 @@ class TopMenu extends React.Component<ITopMenuProps, ITopMenuState> {
 
 const mapStateToProps = (state: IAppState) => {
   return {
-    settings: state.settings
+    settings: state.settings,
+    apiContext: state.apiContext
   }
 }
 
+const MenuOption = styled.div`
+  border: ${props => props['data-click'] ? '0px' : '2px solid #FFFFFF'};
+  border-radius: 7px;
+  width: 50px;
+  height: 25px;
+  line-height: 21px;
+  margin-left: 2px;
+  cursor: pointer;
+`
+
+const Grid = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%
+`
+
 type StateProps = ReturnType<typeof mapStateToProps>
 
-const mapDispatchToProps = { saveSettings }
+const mapDispatchToProps = { saveSettings, createApi, destroyApi }
 
 type DispatchProps = typeof mapDispatchToProps
 

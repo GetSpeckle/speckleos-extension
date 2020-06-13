@@ -44,9 +44,6 @@
   "mnemonic": {
     "message": "Mnemonic"
   },
-  "importedAccount": {
-    "message": "Imported Account"
-  },
   "accountName": {
     "message": "Account Name (max 32 chars including space)"
   },
@@ -96,7 +93,7 @@
     "message": "Click the words above in the correct order to confirm your seed phrase."
   },
   "confirmPhraseButton": {
-    "message": "Confirm Backup Phrase"
+    "message": "Confirm"
   },
   "selectNetwork": {
     "message": "Select And Start"
@@ -230,6 +227,9 @@
   "amount": {
     "message": "Amount"
   },
+  "tip": {
+    "message": "Tip(optional)"
+  },
   "toAddress": {
     "message": "Send to"
   },
@@ -254,7 +254,91 @@
   "invalidAddress": {
     "message": "Invalid address"
   },
+  "sign": {
+    "message": "Sign"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "scan": {
+    "message": "Scan signature via camera"
+  },
+  "action": {
+    "message": "Action"
+  },
+  "dest": {
+    "message": "Destination"
+  },
+  "value": {
+    "message": "Value"
+  },
   "clickToQRCode": {
     "message": "Click to show in QR Code"
+  },
+  "networkError": {
+    "message": "There is a network error occurred"
+  },
+  "approve": {
+    "message": "Approve"
+  },
+  "reject": {
+    "message": "Reject"
+  },
+  "authDesc": {
+    "message": "is requesting access to your account"
+  },
+  "accessAlert": {
+    "message": "The request is made from "
+  },
+  "approveAlert": {
+    "message": "Approving gives access to the address of your accounts"
+  },
+  "positiveNumber": {
+    "message": "not a positive number"
+  },
+  "notNegative": {
+    "message": "cannot be negative number"
+  },
+  "requestNotFound": {
+    "message": "Unable to find request"
+  },
+  "unableHandleMessage": {
+    "message": "Unable to handle message of type "
+  },
+  "timerElapsed": {
+    "message": "Account creation timer has elapsed"
+  },
+  "passwordMismatch": {
+    "message": "Password mismatch"
+  },
+  "passwordLength": {
+    "message": "Password minimum length is 8"
+  },
+  "create": {
+    "message": "Create"
+  },
+  "newPassword": {
+    "message": "New password"
+  },
+  "repeatPassword": {
+    "message": "Repeat password"
+  },
+  "chainSearch": {
+    "message": "Chain Search"
+  },
+  "selectChainDesc": {
+    "message": "Start by selecting your chain(s)"
+  },
+  "notEnoughBalance": {
+    "message": "not enough balance available"
+  },
+  "transactionError": {
+    "message": "Error occurred when processing your transaction"
+  },
+  "processingTx": {
+    "message": "Processing transaction, please wait ..."
+  },
+  "connecting": {
+    "message": "Connecting to network, please wait ..."
   }
 }

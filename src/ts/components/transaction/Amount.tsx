@@ -2,34 +2,79 @@ import * as React from 'react'
 import styled from 'styled-components'
 import { Dropdown } from 'semantic-ui-react'
 import t from '../../services/i18n'
+import { SiDef } from '@polkadot/util/types'
+import { SI } from '@polkadot/util/format/si'
+import { ErrorMessage } from '../basic-components'
 
 interface IAmountProps {
   handleAmountChange: any,
-  handleDigitChange: any
+  handleAmountSiChange: any,
+  handleTipChange: any,
+  handleTipSiChange: any,
+  amountError: string,
+  tipError: string
 }
 
+const MIN_P = -3
+const MAX_P = 6
+const siOptions: SiDef[] = SI.filter(({ power }) => power >= MIN_P && power <= MAX_P)
+
 export default class Amount extends React.Component<IAmountProps> {
+
+  componentDidUpdate (prevProps) {
+    if (this.props.amountError !== prevProps.amountError ||
+      this.props.tipError !== prevProps.tipError) {
+      this.render()
+    }
+  }
+
   render () {
+    const defaultValues = siOptions.filter(siDef => siDef.power === 0)
+    const defaultValue = defaultValues[0].value
     return (
-      <div>
-        <Label>{t('amount')}</Label>
-        <div style={{ display: 'flex', width: '311px' }}>
-          <Input>
-            <TruncatedInput type='text' onChange={this.props.handleAmountChange} size={20}/>
-          </Input>
-          <Digit
-            selection={true}
-            options={options}
-            defaultValue={options[8].value}
-            scrolling={true}
-            style={{ minWidth: '100px' }}
-            onChange={this.props.handleDigitChange}
-          />
-        </div>
-      </div>
+      <AmountDiv>
+        <InputDiv>
+          <Label>{t('amount')}</Label>
+          <Row>
+            <Input>
+              <TruncatedInput type='text' onChange={this.props.handleAmountChange} size={21} />
+              <ErrorMessage>{this.props.amountError}</ErrorMessage>
+            </Input>
+            <SiDropdown
+              selection={true}
+              options={siOptions}
+              defaultValue={defaultValue}
+              scrolling={true}
+              onChange={this.props.handleAmountSiChange}
+            />
+          </Row>
+        </InputDiv>
+        <InputDiv>
+          <Label>{t('tip')}</Label>
+          <Row>
+            <Input>
+              <TruncatedInput type='text' onChange={this.props.handleTipChange} size={21}/>
+              <ErrorMessage>{this.props.tipError}</ErrorMessage>
+            </Input>
+            <SiDropdown
+              selection={true}
+              options={siOptions}
+              defaultValue={defaultValue}
+              scrolling={true}
+              onChange={this.props.handleTipSiChange}
+            />
+          </Row>
+        </InputDiv>
+      </AmountDiv>
     )
   }
 }
+
+const Row = styled.div`
+  display: flex
+  justify-content: space-between
+  width: 311px
+`
 
 const Label = styled.label`
   {
@@ -55,42 +100,30 @@ const Label = styled.label`
 const Input = styled.div`
 {
   width: 200px;
-  height: 42px;
+  height: 54px;
   text-overflow: ellipsis;
   white-space:nowrap;
   overflow: hidden;
 }
 `
 
-const Digit = styled(Dropdown)`
+const SiDropdown = styled(Dropdown)`
 {
   margin-left: 11px;
   height: 32px;
+  min-width: 80px !important;
 }
 `
-
-const options = [
-  { power: -24, value: 'y', text: 'yocto' },
-  { power: -21, value: 'z', text: 'zepto' },
-  { power: -18, value: 'a', text: 'atto' },
-  { power: -15, value: 'f', text: 'femto' },
-  { power: -12, value: 'p', text: 'pico' },
-  { power: -9, value: 'n', text: 'nano' },
-  { power: -6, value: 'µ', text: 'micro' },
-  { power: -3, value: 'm', text: 'milli' },
-  { power: 0, value: '-', text: 'DOT' }, // position 8
-  { power: 3, value: 'k', text: 'Kilo' },
-  { power: 6, value: 'M', text: 'Mega' },
-  { power: 9, value: 'G', text: 'Giga' },
-  { power: 12, value: 'T', text: 'Tera' },
-  { power: 15, value: 'P', text: 'Peta' },
-  { power: 18, value: 'E', text: 'Exa' },
-  { power: 21, value: 'Z', text: 'Zeta' },
-  { power: 24, value: 'Y', text: 'Yotta' }
-]
 
 const TruncatedInput = styled.input`
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+`
+
+const AmountDiv = styled.div`
+  height: 123px;
+`
+const InputDiv = styled.div`
+  margin-top: 10px;
 `
