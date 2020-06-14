@@ -65,4 +65,4 @@ yarn run prod
 5. That's it.
 
 ## License
-Apache
+AGPL-3.0 
