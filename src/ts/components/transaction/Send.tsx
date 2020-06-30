@@ -36,7 +36,7 @@ import { Index } from '@polkadot/types/interfaces'
 import { SiDef } from '@polkadot/util/types'
 import styled from 'styled-components'
 import { isAddressValid } from '../../services/address-transformer'
-import { defaultExtensions } from '@polkadot/types/extrinsic/signedExtensions'
+import { chains } from '../../constants/chains'
 
 interface ISendProps extends StateProps, RouteComponentProps, DispatchProps {}
 
@@ -177,7 +177,7 @@ class Send extends React.Component<ISendProps, ISendState> {
       transactionVersion: this.api.runtimeVersion.transactionVersion.toHex(),
       tip: tipBn.toString(),
       version: extrinsic.version,
-      signedExtensions: defaultExtensions
+      signedExtensions: chains[this.props.settings.chain].registry.signedExtensions
     }
     const payloadValue: ExtrinsicPayloadValue = {
       era: extrinsic.era,
@@ -189,7 +189,7 @@ class Send extends React.Component<ISendProps, ISendState> {
       specVersion: this.api.runtimeVersion.specVersion.toNumber(),
       transactionVersion: this.api.runtimeVersion.transactionVersion.toNumber()
     }
-    signExtrinsic(signerPayload).then(signature => {
+    signExtrinsic(this.props.settings.chain, signerPayload).then(signature => {
       const signedExtrinsic = extrinsic.addSignature(
         currentAddress,
         signature,
@@ -229,7 +229,7 @@ class Send extends React.Component<ISendProps, ISendState> {
       fee: formatBalance(this.state.fee)
     }
 
-    this.updateList(address, this.props.settings.network, txItem)
+    this.updateList(address, this.props.settings.chain, txItem)
 
     const submittable = this.state.extrinsic as SubmittableExtrinsic
     submittable.send((result: SubmittableResult) => {
@@ -241,11 +241,11 @@ class Send extends React.Component<ISendProps, ISendState> {
         console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`)
         txItem.updateTime = new Date().getTime()
         txItem.status = 'Success'
-        this.updateList(address, this.props.settings.network, txItem)
+        this.updateList(address, this.props.settings.chain, txItem)
       } else if (result.isError) {
         txItem.updateTime = new Date().getTime()
         txItem.status = 'Failure'
-        this.updateList(address, this.props.settings.network, txItem)
+        this.updateList(address, this.props.settings.chain, txItem)
         this.props.setError(t('transactionError'))
         this.setState({ isLoading: false })
       } else if (result.isWarning) {
@@ -255,17 +255,16 @@ class Send extends React.Component<ISendProps, ISendState> {
       console.log('Error', err)
       txItem.updateTime = new Date().getTime()
       txItem.status = 'Failure'
-      this.updateList(address, this.props.settings.network, txItem)
+      this.updateList(address, this.props.settings.chain, txItem)
       this.props.setError(t('transactionError'))
       this.setState({ isLoading: false })
     })
   }
 
-  updateList = (address, network, txItem) => {
-    this.props.getTransactions(address, network).then((getTxs) => {
+  updateList = (address, chain, txItem) => {
+    this.props.getTransactions(address, chain).then((getTxs) => {
       const txs = getTxs.value
-      this.props.upsertTransaction(address, network,
-        txItem, txs)
+      this.props.upsertTransaction(address, chain, txItem, txs)
     })
   }
 
@@ -342,7 +341,7 @@ class Send extends React.Component<ISendProps, ISendState> {
             </FeeSection>
             <Section>
               <Confirm
-                network={this.props.settings.network}
+                chain={this.props.settings.chain}
                 color={this.props.settings.color}
                 extrinsic={this.state.extrinsic}
                 trigger={submitButton}
@@ -366,15 +365,15 @@ class Send extends React.Component<ISendProps, ISendState> {
 }
 
 const DividerSection = styled.div`
-  width: 100%
-  margin: 8px 0 9px
-  text-align: center
+  width: 100%;
+  margin: 8px 0 9px;
+  text-align: center;
 `
 
 const FeeSection = styled.div`
-  width: 100%
-  margin: -5px 0 -4px
-  text-align: center
+  width: 100%;
+  margin: -5px 0 -4px;
+  text-align: center;
 `
 
 const mapStateToProps = (state: IAppState) => {

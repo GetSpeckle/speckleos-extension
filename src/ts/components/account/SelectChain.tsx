@@ -10,15 +10,15 @@ import {
 import { HOME_ROUTE } from '../../constants/routes'
 import { Divider, Form, Input } from 'semantic-ui-react'
 import styled from 'styled-components'
-import NetworkList from './NetworkList'
+import ChainList from './ChainList'
 
-interface ISelectNetworkProps extends RouteComponentProps {}
+interface ISelectChainProps extends RouteComponentProps {}
 
-interface ISelectNetworkState {
+interface ISelectChainState {
   search: string
 }
 
-class SelectNetwork extends React.Component<ISelectNetworkProps, ISelectNetworkState> {
+class SelectChain extends React.Component<ISelectChainProps, ISelectChainState> {
 
   state = {
     search: ''
@@ -42,47 +42,47 @@ class SelectNetwork extends React.Component<ISelectNetworkProps, ISelectNetworkS
         <Form>
           <ChainInput placeholder={t('chainSearch')} onChange={this.handleChange}/>
         </Form>
-        <NetworkSection>
-          <NetworkList search={this.state.search}/>
-        </NetworkSection>
+        <ChainSection>
+          <ChainList search={this.state.search}/>
+        </ChainSection>
         <ChainQuote>{t('selectChainDesc')}</ChainQuote>
         <Divider />
         <StyledButton type='button' onClick={this.gotoDashboard}>
-          {t('selectNetwork')}
+          {t('selectChain')}
         </StyledButton>
       </ContentContainer>
     )
   }
 }
 
-export default withRouter(SelectNetwork)
+export default withRouter(SelectChain)
 
 const ChainInput = styled(Input)`
-  width: 311px
-  height: 42px
-  border-color: #cad3d7
-  color: #cad3d7
-  line-height: 1.43
-  font-size: 14px
-  font-family: Nunito
+  width: 311px;
+  height: 42px;
+  border-color: #cad3d7;
+  color: #cad3d7;
+  line-height: 1.43;
+  font-size: 14px;
+  font-family: Nunito;
 `
 
-export const NetworkSection = styled.div`
-  width: 100%
-  margin: 8px 0 9px
-  text-align: center
+export const ChainSection = styled.div`
+  width: 100%;
+  margin: 8px 0 9px;
+  text-align: center;
 `
 
 export const ChainQuote = styled.h3`
-  margin-top: 0px
-  opacity: 0.6
-  color: #3e5860
-  font-size: 14px
-  font-family: Nunito
-  text-align: center
+  margin-top: 0px;
+  opacity: 0.6;
+  color: #3e5860;
+  font-size: 14px;
+  font-family: Nunito;
+  text-align: center;
   > span {
     opacity: 1;
     font-weight: bold;
-    color: #000000
-  }
+    color: #000000;
+  };
 `

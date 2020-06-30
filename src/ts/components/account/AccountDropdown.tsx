@@ -22,7 +22,7 @@ import { colorSchemes } from '../styles/themes'
 import styled from 'styled-components'
 import { getTransactions } from '../../background/store/transaction'
 import recodeAddress, { displayAddress } from '../../services/address-transformer'
-import { networks } from '../../constants/networks'
+import { chains } from '../../constants/chains'
 import { IdenticonTheme } from '../../constants/identicon-theme'
 
 interface IAccountDropdownProps extends StateProps, RouteComponentProps, DispatchProps {
@@ -33,7 +33,7 @@ interface IAccountDropdownState {
   options: Array<Option>,
   addressCopied: boolean,
   copiedTimeout?: any,
-  network: string
+  chain: string
 }
 
 interface Option {
@@ -56,7 +56,7 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
     this.state = {
       addressCopied: false,
       options: [],
-      network: props.settings.network
+      chain: props.settings.chain
     }
   }
 
@@ -110,13 +110,13 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
         if (!Array.isArray(result) || !result.length) {
           return
         }
-        const network = networks[this.props.settings.network]
-        const identiconTheme = network.identiconTheme
+        const chain = chains[this.props.settings.chain]
+        const identiconTheme = chain.identiconTheme
         const accounts: IAccount[] = result.map(
           (keyring: KeyringPair$Json) => {
             return {
-              name: keyring.meta.name,
-              address: recodeAddress(keyring.address, network.ss58Format)
+              name: keyring.meta.name as string,
+              address: recodeAddress(keyring.address, chain.ss58Format)
             }
           }
         )
@@ -125,7 +125,7 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
         if (selectedAccount) {
           selectedAccount = {
             ...selectedAccount,
-            address: recodeAddress(selectedAccount.address, network.ss58Format)
+            address: recodeAddress(selectedAccount.address, chain.ss58Format)
           }
         } else {
           selectedAccount = accounts[0]
@@ -181,14 +181,14 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
   }
 
   componentDidUpdate (_prevProps, prevState) {
-    if (this.props.settings.network !== prevState.network) {
+    if (this.props.settings.chain !== prevState.chain) {
       this.loadAccounts()
     }
   }
 
   static getDerivedStateFromProps (nextProps, prevState) {
-    if (nextProps.settings.network !== prevState.network) {
-      return { network: nextProps.settings.network }
+    if (nextProps.settings.chain !== prevState.chain) {
+      return { chain: nextProps.settings.chain }
     }
     return {}
   }
@@ -217,7 +217,7 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
           >
             <Dropdown.Menu style={backgroundStyle}>
               <Dropdown.Menu scrolling={true} style={backgroundStyle}>
-                {this.state.options.map(option => <Dropdown.Item key={option.key} {...option} />)}
+                {this.state.options.map(option => <Dropdown.Item {...option} key={option.key}/>)}
               </Dropdown.Menu>
 
               <Dropdown.Divider/>
@@ -279,15 +279,15 @@ class AccountDropdown extends React.Component<IAccountDropdownProps, IAccountDro
 }
 
 export const QrIcon = styled(Icon)`
-  color: white
-  padding: 2px
-  text-decoration: none
+  color: white;
+  padding: 2px;
+  text-decoration: none;
 `
 
 export const AccountSection = styled.div`
-  width: 100%
-  margin: 8px 0 9px
-  text-align: center
+  width: 100%;
+  margin: 8px 0 9px;
+  text-align: center;
 `
 export const Float = styled.div`
   z-index: 1;

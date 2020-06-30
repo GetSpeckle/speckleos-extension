@@ -5,7 +5,7 @@ import { Selected } from './Selected'
 
 type Selected = true | false
 
-interface INetworkCardProps {
+interface IChainCardProps {
   imgPath: string
   name: string
   supported: boolean
@@ -13,11 +13,11 @@ interface INetworkCardProps {
   selected: Selected
 }
 
-interface INetworkCardState {
+interface IChainCardState {
   selected: Selected
 }
 
-export default class NetworkCard extends React.Component<INetworkCardProps, INetworkCardState> {
+export default class ChainCard extends React.Component<IChainCardProps, IChainCardState> {
 
   static defaultProps = {
     selected: false
@@ -43,12 +43,12 @@ export default class NetworkCard extends React.Component<INetworkCardProps, INet
     return (
       <div style={{ 'position': 'relative' }}>
         <Card onClick={this.toggleSelected}>
-          <NetworkDetail>
-            <NetworkImage src={this.props.imgPath} alt={'chain-logo'}/>
-                <NetworkName>
+          <ChainDetail>
+            <ChainImage src={this.props.imgPath} alt={'chain-logo'}/>
+                <ChainName>
                 {this.props.name}<br/><span>{!this.props.supported ? '(coming soon)' : ''}</span>
-                </NetworkName>
-            </NetworkDetail>
+                </ChainName>
+            </ChainDetail>
           </Card>
       </div>
     )
@@ -58,12 +58,12 @@ export default class NetworkCard extends React.Component<INetworkCardProps, INet
     return (
       <div style={{ 'position': 'relative' }}>
         <SelectedCard color={this.props.colorScheme.stopColorOne} onClick={this.toggleSelected}>
-          <NetworkDetail>
-            <NetworkImage src={this.props.imgPath} alt={'chain-logo'}/>
-            <NetworkName>
+          <ChainDetail>
+            <ChainImage src={this.props.imgPath} alt={'chain-logo'}/>
+            <ChainName>
               {this.props.name}<br/><span>{!this.props.supported ? '(coming soon)' : ''}</span>
-            </NetworkName>
-          </NetworkDetail>
+            </ChainName>
+          </ChainDetail>
         </SelectedCard>
         <Check colorScheme={this.props.colorScheme}/>
       </div>
@@ -71,58 +71,58 @@ export default class NetworkCard extends React.Component<INetworkCardProps, INet
   }
 }
 
-const NetworkDetail = styled.div`
-  flex-direction: column
-  justify-content: space-around
-  text-align: center
-  align-self: center
+const ChainDetail = styled.div`
+  flex-direction: column;
+  justify-content: space-around;
+  text-align: center;
+  align-self: center;
 `
-const NetworkImage = styled.img`
-  width: 48px
-  height: 48px
-  object-fit: contain
+const ChainImage = styled.img`
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 `
 
 const Card = styled.div`
-  min-width: 100px
-  height: 100px
+  min-width: 100px;
+  height: 100px;
   border-radius: 4px;
-  display: flex
-  align-items: center
-  justify-content: center
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 2px 8px 0 rgba(62, 88, 96, 0.1);
-  background-color: #ffffff
+  background-color: #ffffff;
   :hover {
-    box-shadow: 0 0 11px rgba(33,33,33,.2)
+    box-shadow: 0 0 11px rgba(33,33,33,.2);
   }
 `
 
 const SelectedCard = styled.div`
-  min-width: 100px
-  height: 100px
+  min-width: 100px;
+  height: 100px;
   border-radius: 4px;
-  display: flex
-  align-items: center
-  justify-content: center
-  border: solid 1px ${props => props.color}
-  background-color: #ffffff
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: solid 1px ${props => props.color};
+  background-color: #ffffff;
 `
 
-const NetworkName = styled.p`
-  width: 70px
-  margin-top: 6px
-  font-size: 12px
-  color: #3e5860
-  font-weight: bold
-  font-family: Nunito
+const ChainName = styled.p`
+  width: 70px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #3e5860;
+  font-weight: bold;
+  font-family: Nunito;
   > span {
-    font-size: 8px
-  }
+    font-size: 8px;
+  };
 `
 
 const Check = styled(Selected)`
-  position: absolute
-  top: 5px
-  left: 5px
-  z-index: 3000
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 3000;
 `

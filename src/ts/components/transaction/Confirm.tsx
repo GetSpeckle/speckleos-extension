@@ -10,10 +10,10 @@ import { colorSchemes } from '../styles/themes'
 import { IExtrinsic } from '@polkadot/types/types'
 import { formatBalance } from '@polkadot/util'
 import BN = require('bn.js')
-import { networks } from '../../constants/networks'
+import { chains } from '../../constants/chains'
 
 interface IConfirmProps {
-  network: string,
+  chain: string,
   trigger: any,
   fromAddress: string,
   amount: BN,
@@ -83,8 +83,8 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
   copyToAddressToClipboard = () => this.copyToClipboard(this.props.toAddress)
 
   render () {
-    const network = networks[this.props.network]
-    const identiconTheme = network.identiconTheme
+    const chain = chains[this.props.chain]
+    const identiconTheme = chain.identiconTheme
     const totalFee = this.props.amount.add(this.props.fee).add(this.props.tip)
     return (
       <Modal
@@ -186,12 +186,12 @@ export default class Confirm extends React.Component<IConfirmProps, IConfirmStat
 }
 
 const UpperSection = styled.div`
-  width: 100%
-  margin: 8px 0 9px
-  text-align: center
+  width: 100%;
+  margin: 8px 0 9px;
+  text-align: center;
 `
 const Offset = styled.div`
-  width: 100%
+  width: 100%;
   margin-top:-34px;
   display: flex;
   justify-content: center;
@@ -222,9 +222,9 @@ const Subheading = styled.p`
 `
 
 const OverlaySection = styled.div`
-  width: 100%
-  margin-top: 7px
-  text-align: center
+  width: 100%;
+  margin-top: 7px;
+  text-align: center;
 `
 
 const Status = styled.div`
@@ -273,7 +273,7 @@ const FromTo = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  background-color: ${props => props.color}
+  background-color: ${props => props.color};
   color: #fff;
   margin-top: 15px;
  `
